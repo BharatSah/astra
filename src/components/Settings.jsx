@@ -1,33 +1,29 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
-import { Plus, Trash2, Mail, Server, Shield, RefreshCw, Save } from 'lucide-react';
+import { Plus, Trash2, Mail, Server, Shield, RefreshCw, Save, Laptop, Globe, Image, X } from 'lucide-react';
 
-export default function Settings({ onNotify }) {
-  const [activeSubTab, setActiveSubTab] = useState('services');
+export default function Settings({ onNotify, activeSubTab = 'services', onSubTabChange }) {
+  
+  // Services state
   const [services, setServices] = useState([]);
   const [loadingServices, setLoadingServices] = useState(false);
   const [newServiceName, setNewServiceName] = useState('');
   const [newServiceDesc, setNewServiceDesc] = useState('');
+  const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
 
-  // SMTP Settings
-  const [smtp, setSmtp] = useState({
-    host: 'smtp.gmail.com',
-    port: 587,
-    secure: false,
-    username: '',
-    password: '',
-    senderName: 'Astra Notifications',
-    senderEmail: ''
-  });
+  // Platforms state
+  const [platforms, setPlatforms] = useState([]);
+  const [loadingPlatforms, setLoadingPlatforms] = useState(false);
+  const [newPlatformName, setNewPlatformName] = useState('');
+  const [newPlatformUrl, setNewPlatformUrl] = useState('');
+  const [newPlatformLogo, setNewPlatformLogo] = useState('');
+  const [isPlatformModalOpen, setIsPlatformModalOpen] = useState(false);
 
-  const [templates, setTemplates] = useState({
-    expiry_warning: { subject: '', body: '' },
-    email_recipient: { to_email: '' },
-    payment_reminder: { subject: '', body: '' }
-  });
-
-  const [savingSmtp, setSavingSmtp] = useState(false);
-  const [savingTemplates, setSavingTemplates] = useState(false);
+  useEffect(() => {
+    fetchServices();
+    fetchPlatforms();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const fetchServices = async () => {
     setLoadingServices(true);
@@ -43,28 +39,19 @@ export default function Settings({ onNotify }) {
     }
   };
 
-  const fetchSystemSettings = async () => {
+  const fetchPlatforms = async () => {
+    setLoadingPlatforms(true);
     try {
-      const { data, error } = await supabase.from('system_settings').select('*');
+      const { data, error } = await supabase.from('platforms').select('*').order('platform_name', { ascending: true });
       if (error) throw error;
-      
-      if (data) {
-        const smtpData = data.find(item => item.key === 'smtp_config');
-        if (smtpData) setSmtp(smtpData.value);
-
-        const templateData = data.find(item => item.key === 'email_templates');
-        if (templateData) setTemplates(templateData.value);
-      }
+      setPlatforms(data || []);
     } catch (err) {
-      console.error('Error fetching system settings:', err.message);
+      console.error('Error fetching platforms:', err.message);
+      onNotify('error', 'Failed to load platforms');
+    } finally {
+      setLoadingPlatforms(false);
     }
   };
-
-  useEffect(() => {
-    fetchServices();
-    fetchSystemSettings();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const handleAddService = async (e) => {
     e.preventDefault();
@@ -80,6 +67,7 @@ export default function Settings({ onNotify }) {
       onNotify('success', 'Service added successfully');
       setNewServiceName('');
       setNewServiceDesc('');
+      setIsServiceModalOpen(false);
       fetchServices();
     } catch (err) {
       console.error('Error adding service:', err.message);
@@ -102,39 +90,42 @@ export default function Settings({ onNotify }) {
     }
   };
 
-  const handleSaveSmtp = async (e) => {
+  const handleAddPlatform = async (e) => {
     e.preventDefault();
-    setSavingSmtp(true);
+    if (!newPlatformName.trim()) return;
+
     try {
-      const { error } = await supabase.from('system_settings').upsert({
-        key: 'smtp_config',
-        value: smtp
+      const { error } = await supabase.from('platforms').insert({
+        platform_name: newPlatformName.trim(),
+        url: newPlatformUrl.trim(),
+        logo: newPlatformLogo.trim()
       });
       if (error) throw error;
-      onNotify('success', 'SMTP settings saved successfully');
+
+      onNotify('success', 'Platform registry updated');
+      setNewPlatformName('');
+      setNewPlatformUrl('');
+      setNewPlatformLogo('');
+      setIsPlatformModalOpen(false);
+      fetchPlatforms();
     } catch (err) {
-      console.error('Error saving SMTP settings:', err.message);
-      onNotify('error', 'Failed to save SMTP settings');
-    } finally {
-      setSavingSmtp(false);
+      console.error('Error adding platform:', err.message);
+      onNotify('error', err.message.includes('duplicate') || err.message.includes('primary') ? 'Platform name already registered' : 'Failed to add platform');
     }
   };
 
-  const handleSaveTemplates = async (e) => {
-    e.preventDefault();
-    setSavingTemplates(true);
+  const handleDeletePlatform = async (name) => {
+    if (!confirm(`Are you sure you want to delete "${name}"? WARNING: All passwords associated with this platform will also be deleted due to constraint dependencies.`)) return;
+
     try {
-      const { error } = await supabase.from('system_settings').upsert({
-        key: 'email_templates',
-        value: templates
-      });
+      const { error } = await supabase.from('platforms').delete().eq('platform_name', name);
       if (error) throw error;
-      onNotify('success', 'Email templates saved successfully');
+
+      onNotify('success', 'Platform removed successfully');
+      fetchPlatforms();
     } catch (err) {
-      console.error('Error saving templates:', err.message);
-      onNotify('error', 'Failed to save templates');
-    } finally {
-      setSavingTemplates(false);
+      console.error('Error deleting platform:', err.message);
+      onNotify('error', 'Failed to delete platform');
     }
   };
 
@@ -145,104 +136,52 @@ export default function Settings({ onNotify }) {
         <h1 className="text-3xl font-extrabold tracking-tight">
           System <span className="gradient-text-purple">Settings</span>
         </h1>
-        <p className="text-slate-400 mt-1">Configure service catalogs, SMTP servers, and notification templates.</p>
+        <p className="text-slate-400 mt-1 text-sm font-semibold">Configure services, password platforms, and SMTP email parameters.</p>
       </div>
 
-      {/* Sub tabs */}
-      <div className="flex border-b border-slate-800 space-x-8">
-        <button
-          onClick={() => setActiveSubTab('services')}
-          className={`pb-4 text-sm font-semibold transition-all duration-200 border-b-2 ${
-            activeSubTab === 'services'
-              ? 'border-brand-500 text-brand-400'
-              : 'border-transparent text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          Service Catalog
-        </button>
-        <button
-          onClick={() => setActiveSubTab('smtp')}
-          className={`pb-4 text-sm font-semibold transition-all duration-200 border-b-2 ${
-            activeSubTab === 'smtp'
-              ? 'border-brand-500 text-brand-400'
-              : 'border-transparent text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          Email & SMTP Config
-        </button>
-      </div>
 
-      {/* Services Content */}
+
+      {/* Services Subpage */}
       {activeSubTab === 'services' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Add Service Panel */}
-          <div className="lg:col-span-1 glass-panel p-6 rounded-2xl border border-slate-850 h-fit">
-            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-              <Plus className="w-5 h-5 text-brand-400" />
-              Add New Service
-            </h2>
-            <form onSubmit={handleAddService} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Service Name</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Premium Cloud Hosting"
-                  value={newServiceName}
-                  onChange={(e) => setNewServiceName(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl text-slate-200 glass-input text-sm"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Description</label>
-                <textarea
-                  placeholder="Service particulars, pricing, or details..."
-                  value={newServiceDesc}
-                  onChange={(e) => setNewServiceDesc(e.target.value)}
-                  rows="3"
-                  className="w-full px-4 py-2.5 rounded-xl text-slate-200 glass-input text-sm resize-none"
-                />
-              </div>
-              <button
-                type="submit"
-                className="w-full px-4 py-3 bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 rounded-xl text-white font-medium text-sm transition-all duration-200 shadow-lg shadow-brand-500/10 shimmer-btn"
-              >
-                Create Service
-              </button>
-            </form>
-          </div>
-
-          {/* Service List */}
-          <div className="lg:col-span-2 glass-panel p-6 rounded-2xl border border-slate-850">
-            <div className="flex items-center justify-between mb-4">
+        <div className="flex-1 flex flex-col h-full space-y-4">
+          {/* Service Directory list */}
+          <div className="glass-panel p-6 rounded-2xl border border-slate-850 flex-1 flex flex-col" style={{ minHeight: 'calc(100vh - 12rem)' }}>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
               <h2 className="text-xl font-bold flex items-center gap-2">
                 <Server className="w-5 h-5 text-brand-400" />
                 Service Directory
               </h2>
-              <button onClick={fetchServices} className="text-slate-400 hover:text-white transition">
-                <RefreshCw className={`w-4 h-4 ${loadingServices ? 'animate-spin' : ''}`} />
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setIsServiceModalOpen(true)}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 rounded-xl text-white font-bold text-sm shadow-lg shadow-brand-500/15 transition duration-200 shimmer-btn shrink-0"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Service
+                </button>
+              </div>
             </div>
 
             {loadingServices ? (
-              <div className="flex justify-center items-center py-12">
+              <div className="flex justify-center items-center py-24 flex-1">
                 <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-brand-500"></div>
               </div>
             ) : services.length === 0 ? (
-              <div className="text-center py-12 text-slate-500 text-sm">
-                No services found. Add your first service using the panel.
+              <div className="flex flex-col items-center justify-center py-24 text-slate-500 flex-1">
+                <Server className="w-12 h-12 text-slate-700 mb-4" />
+                <p className="text-sm">No services found. Add your first service to get started.</p>
               </div>
             ) : (
-              <div className="divide-y divide-slate-800 max-h-[400px] overflow-y-auto pr-2">
+              <div className="divide-y divide-slate-800 flex-1 overflow-y-auto pr-2">
                 {services.map((service) => (
-                  <div key={service.id} className="py-4 flex items-center justify-between first:pt-0 last:pb-0">
+                  <div key={service.id} className="py-4 flex items-center justify-between first:pt-0 last:pb-0 group">
                     <div className="pr-4">
-                      <h3 className="font-semibold text-slate-200">{service.name}</h3>
-                      <p className="text-xs text-slate-400 mt-0.5">{service.description || 'No description provided.'}</p>
+                      <h3 className="font-bold text-slate-200 text-sm">{service.name}</h3>
+                      <p className="text-xs text-slate-400 mt-1">{service.description || 'No description provided.'}</p>
                     </div>
                     <button
                       onClick={() => handleDeleteService(service.id, service.name)}
-                      className="p-2 text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 rounded-xl transition"
+                      className="p-2 text-slate-500 hover:text-rose-400 hover:bg-slate-800/60 rounded-xl transition opacity-0 group-hover:opacity-100"
                       title="Delete Service"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -252,194 +191,232 @@ export default function Settings({ onNotify }) {
               </div>
             )}
           </div>
+
+          {/* Add Service Modal */}
+          {isServiceModalOpen && (
+            <div className="fixed inset-0 z-50 flex flex-col bg-dark-950/95 backdrop-blur-md animate-slide-up">
+              <div className="flex justify-end px-6 pt-4 shrink-0">
+                <button
+                  onClick={() => setIsServiceModalOpen(false)}
+                  className="p-2.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition border border-slate-800"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto px-8 py-4 flex items-center justify-center">
+                <div className="w-full max-w-lg">
+                  <div className="mb-8 text-center">
+                    <div className="w-12 h-12 bg-brand-500/10 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-brand-500/20">
+                      <Server className="w-6 h-6 text-brand-400" />
+                    </div>
+                    <h2 className="text-2xl font-bold text-white mb-2">Add New Service</h2>
+                    <p className="text-sm text-slate-400">Define a new service category for tracking.</p>
+                  </div>
+
+                  <form onSubmit={handleAddService} className="space-y-6">
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Service Name *</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Premium Cloud Hosting"
+                        value={newServiceName}
+                        onChange={(e) => setNewServiceName(e.target.value)}
+                        className="w-full px-4 py-3.5 rounded-xl text-slate-200 glass-input text-sm"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Description</label>
+                      <textarea
+                        placeholder="Service particulars, pricing, or details..."
+                        value={newServiceDesc}
+                        onChange={(e) => setNewServiceDesc(e.target.value)}
+                        rows="3"
+                        className="w-full px-4 py-3.5 rounded-xl text-slate-200 glass-input text-sm resize-none"
+                      />
+                    </div>
+                    <div className="pt-4 flex justify-end gap-3 text-sm">
+                      <button
+                        type="button"
+                        onClick={() => setIsServiceModalOpen(false)}
+                        className="px-5 py-3 bg-slate-900 text-slate-400 hover:text-white rounded-xl transition font-semibold"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        className="px-8 py-3 bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 rounded-xl text-white font-bold shadow-lg shadow-brand-500/10 transition duration-200 shimmer-btn"
+                      >
+                        Create Service
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
-      {/* SMTP Content */}
-      {activeSubTab === 'smtp' && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* SMTP Credentials */}
-          <div className="glass-panel p-6 rounded-2xl border border-slate-850">
-            <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
-              <Shield className="w-5 h-5 text-brand-400" />
-              Gmail SMTP Configuration
-            </h2>
-            <form onSubmit={handleSaveSmtp} className="space-y-4">
-              <div className="grid grid-cols-3 gap-4">
-                <div className="col-span-2">
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">SMTP Host</label>
-                  <input
-                    type="text"
-                    value={smtp.host}
-                    onChange={(e) => setSmtp({ ...smtp, host: e.target.value })}
-                    className="w-full px-4 py-2.5 rounded-xl text-slate-200 glass-input text-sm"
-                    required
-                  />
-                </div>
-                <div className="col-span-1">
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Port</label>
-                  <input
-                    type="number"
-                    value={smtp.port}
-                    onChange={(e) => setSmtp({ ...smtp, port: parseInt(e.target.value) || 587 })}
-                    className="w-full px-4 py-2.5 rounded-xl text-slate-200 glass-input text-sm"
-                    required
-                  />
-                </div>
+      {/* Platforms Subpage */}
+      {activeSubTab === 'platforms' && (
+        <div className="flex-1 flex flex-col h-full space-y-4">
+          {/* Platforms Directory list */}
+          <div className="glass-panel p-6 rounded-2xl border border-slate-850 flex-1 flex flex-col" style={{ minHeight: 'calc(100vh - 12rem)' }}>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+              <h2 className="text-xl font-bold flex items-center gap-2">
+                <Laptop className="w-5 h-5 text-brand-400" />
+                Registered Platforms
+              </h2>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setIsPlatformModalOpen(true)}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 rounded-xl text-white font-bold text-sm shadow-lg shadow-brand-500/15 transition duration-200 shimmer-btn shrink-0"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Platform
+                </button>
               </div>
+            </div>
 
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Gmail Username (Email)</label>
-                <input
-                  type="email"
-                  placeholder="your-email@gmail.com"
-                  value={smtp.username}
-                  onChange={(e) => setSmtp({ ...smtp, username: e.target.value })}
-                  className="w-full px-4 py-2.5 rounded-xl text-slate-200 glass-input text-sm"
-                  required
-                />
+            {loadingPlatforms ? (
+              <div className="flex justify-center items-center py-24 flex-1">
+                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-brand-500"></div>
               </div>
-
-              <div>
-                <div className="flex justify-between items-center mb-2">
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">Gmail App Password</label>
-                  <span className="text-[10px] text-brand-400 font-medium">Use a 16-character Google App Password</span>
-                </div>
-                <input
-                  type="password"
-                  placeholder="xxxx xxxx xxxx xxxx"
-                  value={smtp.password}
-                  onChange={(e) => setSmtp({ ...smtp, password: e.target.value })}
-                  className="w-full px-4 py-2.5 rounded-xl text-slate-200 glass-input text-sm font-mono"
-                  required
-                />
+            ) : platforms.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-24 text-slate-500 flex-1">
+                <Laptop className="w-12 h-12 text-slate-700 mb-4" />
+                <p className="text-sm">No platforms registered. Add your first platform to link credentials.</p>
               </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Sender Display Name</label>
-                  <input
-                    type="text"
-                    value={smtp.senderName}
-                    onChange={(e) => setSmtp({ ...smtp, senderName: e.target.value })}
-                    className="w-full px-4 py-2.5 rounded-xl text-slate-200 glass-input text-sm"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Sender Reply-To Email</label>
-                  <input
-                    type="email"
-                    placeholder="reply-to@gmail.com"
-                    value={smtp.senderEmail || smtp.username}
-                    onChange={(e) => setSmtp({ ...smtp, senderEmail: e.target.value })}
-                    className="w-full px-4 py-2.5 rounded-xl text-slate-200 glass-input text-sm"
-                  />
-                </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 flex-1 overflow-y-auto pr-2 pb-4 content-start">
+                {platforms.map((platform) => (
+                  <div key={platform.platform_name} className="p-4 rounded-xl bg-slate-900/60 border border-slate-850 flex items-center justify-between gap-4 group">
+                    <div className="flex items-center gap-3 truncate">
+                      {platform.logo ? (
+                        <img 
+                          src={platform.logo} 
+                          alt={`${platform.platform_name} logo`} 
+                          onError={(e) => { e.target.src = ''; }} // prevent broken images showing
+                          className="w-10 h-10 rounded-xl object-contain bg-white/5 p-1 shrink-0 border border-white/10" 
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center shrink-0 font-bold text-sm text-brand-400">
+                          {platform.platform_name.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                      <div className="truncate">
+                        <h4 className="font-bold text-slate-200 text-sm truncate">{platform.platform_name}</h4>
+                        {platform.url && (
+                          <a 
+                            href={platform.url} 
+                            target="_blank" 
+                            rel="noreferrer" 
+                            className="text-[11px] text-brand-400 hover:underline block truncate mt-0.5"
+                          >
+                            {platform.url}
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleDeletePlatform(platform.platform_name)}
+                      className="p-2 text-slate-500 hover:text-rose-400 hover:bg-slate-800/60 rounded-xl transition opacity-0 group-hover:opacity-100 shrink-0"
+                      title="Remove Platform"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
               </div>
-
-              <button
-                type="submit"
-                disabled={savingSmtp}
-                className="w-full px-4 py-3 mt-2 bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 rounded-xl text-white font-medium text-sm transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50 shimmer-btn"
-              >
-                {savingSmtp ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                Save SMTP Config
-              </button>
-            </form>
+            )}
           </div>
 
-          {/* Email Templates */}
-          <div className="glass-panel p-6 rounded-2xl border border-slate-850">
-            <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
-              <Mail className="w-5 h-5 text-brand-400" />
-              Notification Templates & Target
-            </h2>
-            <form onSubmit={handleSaveTemplates} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Global Recipient Address (To Whom mail goes to)</label>
-                <input
-                  type="email"
-                  placeholder="admin@yourdomain.com"
-                  value={templates.email_recipient?.to_email || ''}
-                  onChange={(e) => setTemplates({
-                    ...templates,
-                    email_recipient: { to_email: e.target.value }
-                  })}
-                  className="w-full px-4 py-2.5 rounded-xl text-slate-200 glass-input text-sm"
-                  required
-                />
-                <span className="text-[10px] text-slate-500 mt-1 block">Specify who receives these automated updates (e.g. system administrator).</span>
+          {/* Add Platform Modal */}
+          {isPlatformModalOpen && (
+            <div className="fixed inset-0 z-50 flex flex-col bg-dark-950/95 backdrop-blur-md animate-slide-up">
+              <div className="flex justify-end px-6 pt-4 shrink-0">
+                <button
+                  onClick={() => setIsPlatformModalOpen(false)}
+                  className="p-2.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition border border-slate-800"
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
 
-              <div className="border-t border-slate-800 my-4 pt-4">
-                <h3 className="text-sm font-bold text-slate-300 mb-3">Service Expiry Alert Template</h3>
-                <div className="space-y-3">
-                  <input
-                    type="text"
-                    placeholder="Email Subject"
-                    value={templates.expiry_warning?.subject || ''}
-                    onChange={(e) => setTemplates({
-                      ...templates,
-                      expiry_warning: { ...templates.expiry_warning, subject: e.target.value }
-                    })}
-                    className="w-full px-4 py-2 rounded-xl text-slate-200 glass-input text-xs"
-                    required
-                  />
-                  <textarea
-                    placeholder="Email Body Text"
-                    value={templates.expiry_warning?.body || ''}
-                    onChange={(e) => setTemplates({
-                      ...templates,
-                      expiry_warning: { ...templates.expiry_warning, body: e.target.value }
-                    })}
-                    rows="3"
-                    className="w-full px-4 py-2 rounded-xl text-slate-200 glass-input text-xs resize-none"
-                    required
-                  />
-                  <span className="text-[10px] text-slate-500 block">Available tokens: <code>{`{customer_name}`}</code>, <code>{`{service_name}`}</code>, <code>{`{days}`}</code>, <code>{`{expiry_date}`}</code></span>
+              <div className="flex-1 overflow-y-auto px-8 py-4 flex items-center justify-center">
+                <div className="w-full max-w-lg">
+                  <div className="mb-8 text-center">
+                    <div className="w-12 h-12 bg-brand-500/10 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-brand-500/20">
+                      <Laptop className="w-6 h-6 text-brand-400" />
+                    </div>
+                    <h2 className="text-2xl font-bold text-white mb-2">Register Platform</h2>
+                    <p className="text-sm text-slate-400">Add a new platform to map your credentials.</p>
+                  </div>
+
+                  <form onSubmit={handleAddPlatform} className="space-y-6">
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Platform Name *</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. GitHub, AWS, Google Workspace"
+                        value={newPlatformName}
+                        onChange={(e) => setNewPlatformName(e.target.value)}
+                        className="w-full px-4 py-3.5 rounded-xl text-slate-200 glass-input text-sm"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Platform URL</label>
+                      <div className="relative">
+                        <span className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-500">
+                          <Globe className="w-4 h-4" />
+                        </span>
+                        <input
+                          type="url"
+                          placeholder="https://example.com"
+                          value={newPlatformUrl}
+                          onChange={(e) => setNewPlatformUrl(e.target.value)}
+                          className="w-full pl-11 pr-4 py-3.5 rounded-xl text-slate-200 glass-input text-sm"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Logo URL</label>
+                      <div className="relative">
+                        <span className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-500">
+                          <Image className="w-4 h-4" />
+                        </span>
+                        <input
+                          type="url"
+                          placeholder="https://cdn.svgporn.com/logos/example.svg"
+                          value={newPlatformLogo}
+                          onChange={(e) => setNewPlatformLogo(e.target.value)}
+                          className="w-full pl-11 pr-4 py-3.5 rounded-xl text-slate-200 glass-input text-sm"
+                        />
+                      </div>
+                    </div>
+                    <div className="pt-4 flex justify-end gap-3 text-sm">
+                      <button
+                        type="button"
+                        onClick={() => setIsPlatformModalOpen(false)}
+                        className="px-5 py-3 bg-slate-900 text-slate-400 hover:text-white rounded-xl transition font-semibold"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        className="px-8 py-3 bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 rounded-xl text-white font-bold shadow-lg shadow-brand-500/10 transition duration-200 shimmer-btn"
+                      >
+                        Register Platform
+                      </button>
+                    </div>
+                  </form>
                 </div>
               </div>
-
-              <div className="border-t border-slate-800 pt-4">
-                <h3 className="text-sm font-bold text-slate-300 mb-3">Payment Reminder Template</h3>
-                <div className="space-y-3">
-                  <input
-                    type="text"
-                    placeholder="Email Subject"
-                    value={templates.payment_reminder?.subject || ''}
-                    onChange={(e) => setTemplates({
-                      ...templates,
-                      payment_reminder: { ...templates.payment_reminder, subject: e.target.value }
-                    })}
-                    className="w-full px-4 py-2 rounded-xl text-slate-200 glass-input text-xs"
-                    required
-                  />
-                  <textarea
-                    placeholder="Email Body Text"
-                    value={templates.payment_reminder?.body || ''}
-                    onChange={(e) => setTemplates({
-                      ...templates,
-                      payment_reminder: { ...templates.payment_reminder, body: e.target.value }
-                    })}
-                    rows="3"
-                    className="w-full px-4 py-2 rounded-xl text-slate-200 glass-input text-xs resize-none"
-                    required
-                  />
-                  <span className="text-[10px] text-slate-500 block">Available tokens: <code>{`{customer_name}`}</code>, <code>{`{service_name}`}</code>, <code>{`{amount}`}</code>, <code>{`{currency}`}</code>, <code>{`{due_date}`}</code></span>
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={savingTemplates}
-                className="w-full px-4 py-3 bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 rounded-xl text-white font-medium text-sm transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50 shimmer-btn"
-              >
-                {savingTemplates ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                Save Email Templates
-              </button>
-            </form>
-          </div>
+            </div>
+          )}
         </div>
       )}
     </div>

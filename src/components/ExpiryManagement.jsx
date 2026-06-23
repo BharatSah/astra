@@ -1,15 +1,27 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
-import { Plus, Edit2, Trash2, Mail, X, ShieldAlert, Phone, Calendar, Clock } from 'lucide-react';
+import { 
+  Plus, 
+  Edit2, 
+  Trash2, 
+  Mail, 
+  X, 
+  Search, 
+  Info,
+  Sliders,
+  Send,
+  UserPlus
+} from 'lucide-react';
 
 export default function ExpiryManagement({ onNotify, onTriggerEmail }) {
   const [customers, setCustomers] = useState([]);
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState('customers'); // customers or rules
 
-  // Form modal state
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  // Modal form visibility
+  const [isFormOpen, setIsFormOpen] = useState(false);
+
+  // Expiry form states
   const [editingId, setEditingId] = useState(null);
   const [cname, setCname] = useState('');
   const [email, setEmail] = useState('');
@@ -18,8 +30,13 @@ export default function ExpiryManagement({ onNotify, onTriggerEmail }) {
   const [note, setNote] = useState('');
   const [notifyBeforeDays, setNotifyBeforeDays] = useState(7);
   const [expiryDate, setExpiryDate] = useState('');
+  const [recipientEmails, setRecipientEmails] = useState('');
 
-  // Email template settings (fetched for alert evaluation)
+  // Search and Filter states
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+
+  // Email template settings
   const [templates, setTemplates] = useState(null);
 
   const fetchData = async () => {
@@ -40,12 +57,71 @@ export default function ExpiryManagement({ onNotify, onTriggerEmail }) {
         const temp = settingsRes.data.find(x => x.key === 'email_templates');
         if (temp) setTemplates(temp.value);
       }
+
+      // Auto-send expired emails on load
+      const custData = customersRes.data || [];
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      custData.forEach(cust => {
+        const expiry = new Date(cust.expiry_date);
+        const daysLeft = Math.ceil((expiry.getTime() - today.getTime()) / (1000 * 3600 * 24));
+        
+        if (daysLeft <= 0 && cust.recipient_emails) {
+          const sentKey = `expiry_sent_${cust.id}_${today.toISOString().split('T')[0]}`;
+          if (!localStorage.getItem(sentKey)) {
+            localStorage.setItem(sentKey, 'true');
+            autoSendExpiredEmail(cust, servicesRes.data || [], settingsRes.data);
+          }
+        }
+      });
     } catch (err) {
       console.error(err);
-      onNotify('error', 'Error loading customers and rules data');
+      onNotify('error', 'Error loading expiry configuration data');
     } finally {
       setLoading(false);
     }
+  };
+
+  const autoSendExpiredEmail = (customer, servicesData, settingsData) => {
+    let tpl = null;
+    if (settingsData) {
+      const temp = settingsData.find(x => x.key === 'email_templates');
+      if (temp) tpl = temp.value;
+    }
+
+    const serviceObj = servicesData.find(s => s.id === customer.service_id);
+    const serviceName = serviceObj ? serviceObj.name : 'Service';
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const expiry = new Date(customer.expiry_date);
+    const daysLeft = Math.ceil((expiry.getTime() - today.getTime()) / (1000 * 3600 * 24));
+
+    let subject = tpl?.expiry_expired?.subject || 'Critical: Your service {service_name} has expired';
+    let body = tpl?.expiry_expired?.body || 'Dear {customer_name},\n\nYour service {service_name} expired on {expiry_date}.\n\nPlease renew immediately.\n\nBest regards,\nProject Astra';
+
+    subject = subject
+      .replace(/{customer_name}/g, customer.cname)
+      .replace(/{service_name}/g, serviceName)
+      .replace(/{days}/g, Math.abs(daysLeft))
+      .replace(/{expiry_date}/g, customer.expiry_date);
+
+    body = body
+      .replace(/{customer_name}/g, customer.cname)
+      .replace(/{service_name}/g, serviceName)
+      .replace(/{days}/g, Math.abs(daysLeft))
+      .replace(/{expiry_date}/g, customer.expiry_date);
+
+    const recipients = customer.recipient_emails.split(',').map(e => e.trim()).filter(Boolean);
+    recipients.forEach(recipient => {
+      onTriggerEmail({
+        recipient,
+        subject,
+        body,
+        type: 'Auto Expired Alert'
+      });
+    });
   };
 
   useEffect(() => {
@@ -53,7 +129,13 @@ export default function ExpiryManagement({ onNotify, onTriggerEmail }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleOpenAddModal = () => {
+  useEffect(() => {
+    if (services.length > 0 && !serviceId) {
+      setServiceId(services[0].id);
+    }
+  }, [services, serviceId]);
+
+  const handleResetForm = () => {
     setEditingId(null);
     setCname('');
     setEmail('');
@@ -62,10 +144,20 @@ export default function ExpiryManagement({ onNotify, onTriggerEmail }) {
     setNote('');
     setNotifyBeforeDays(7);
     setExpiryDate('');
-    setIsModalOpen(true);
+    setRecipientEmails('');
   };
 
-  const handleOpenEditModal = (cust) => {
+  const handleOpenForm = () => {
+    handleResetForm();
+    setIsFormOpen(true);
+  };
+
+  const handleCloseForm = () => {
+    setIsFormOpen(false);
+    handleResetForm();
+  };
+
+  const handleLoadEdit = (cust) => {
     setEditingId(cust.id);
     setCname(cust.cname);
     setEmail(cust.email);
@@ -74,7 +166,8 @@ export default function ExpiryManagement({ onNotify, onTriggerEmail }) {
     setNote(cust.note || '');
     setNotifyBeforeDays(cust.notify_before_days);
     setExpiryDate(cust.expiry_date);
-    setIsModalOpen(true);
+    setRecipientEmails(cust.recipient_emails || '');
+    setIsFormOpen(true);
   };
 
   const handleSubmit = async (e) => {
@@ -84,7 +177,6 @@ export default function ExpiryManagement({ onNotify, onTriggerEmail }) {
       return;
     }
 
-    // Determine status based on dates
     const expiry = new Date(expiryDate);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -106,58 +198,71 @@ export default function ExpiryManagement({ onNotify, onTriggerEmail }) {
       note,
       notify_before_days: parseInt(notifyBeforeDays) || 7,
       expiry_date: expiryDate,
-      status
+      status,
+      recipient_emails: recipientEmails || email
     };
 
     try {
       if (editingId) {
         const { error } = await supabase.from('customers').update(payload).eq('id', editingId);
         if (error) throw error;
-        onNotify('success', 'Customer record updated successfully');
+        onNotify('success', `Rule for ${cname} has been updated`);
       } else {
         const { error } = await supabase.from('customers').insert(payload);
         if (error) throw error;
-        onNotify('success', 'Customer record saved successfully');
+        onNotify('success', `Rule for ${cname} has been created`);
       }
-      setIsModalOpen(false);
+      handleCloseForm();
       fetchData();
     } catch (err) {
       console.error(err);
-      onNotify('error', 'Error saving customer information');
+      onNotify('error', 'Failed to save rule information');
     }
   };
 
   const handleDelete = async (id, name) => {
-    if (!confirm(`Are you sure you want to delete "${name}"?`)) return;
+    if (!confirm(`Are you sure you want to permanently delete rule "${name}"?`)) return;
     try {
       const { error } = await supabase.from('customers').delete().eq('id', id);
       if (error) throw error;
-      onNotify('success', 'Customer record deleted');
+      onNotify('success', 'Expiry rule deleted successfully');
+      if (editingId === id) handleResetForm();
       fetchData();
     } catch (err) {
       console.error(err);
-      onNotify('error', 'Error deleting customer');
+      onNotify('error', 'Error deleting expiry rule');
     }
   };
 
-  // Evaluate Rules and Simulate/Send Email Warning
   const handleTriggerWarning = (customer) => {
     if (!templates) {
-      onNotify('warning', 'Email templates are not loaded. Set them in settings first.');
+      onNotify('warning', 'Email templates not loaded. Configure in Settings first.');
       return;
     }
 
     const serviceObj = services.find(s => s.id === customer.service_id);
     const serviceName = serviceObj ? serviceObj.name : 'Selected Service';
 
-    // Fetch Recipient
-    const recipient = templates.email_recipient?.to_email || customer.email;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const expiry = new Date(customer.expiry_date);
+    const timeDiff = expiry.getTime() - today.getTime();
+    const daysLeft = Math.ceil(timeDiff / (1000 * 3600 * 24));
+    const isExpired = daysLeft <= 0;
 
-    // Build Email body and subject using tokens
-    let subject = templates.expiry_warning?.subject || 'Warning: Service expiring';
-    let body = templates.expiry_warning?.body || 'Your service {service_name} is expiring.';
+    let subject = '';
+    let body = '';
+    let emailType = 'Expiry Alert';
 
-    const daysLeft = Math.ceil((new Date(customer.expiry_date) - new Date()) / (1000 * 3600 * 24));
+    if (isExpired) {
+      subject = templates.expiry_expired?.subject || 'Critical: Service {service_name} has expired';
+      body = templates.expiry_expired?.body || 'Your service {service_name} has expired.';
+      emailType = 'Service Expired Alert';
+    } else {
+      subject = templates.expiry_warning?.subject || 'Warning: Service {service_name} expiring soon';
+      body = templates.expiry_warning?.body || 'Your service {service_name} is expiring soon.';
+      emailType = 'Expiry Warning Alert';
+    }
 
     subject = subject
       .replace(/{customer_name}/g, customer.cname)
@@ -171,317 +276,250 @@ export default function ExpiryManagement({ onNotify, onTriggerEmail }) {
       .replace(/{days}/g, Math.max(0, daysLeft))
       .replace(/{expiry_date}/g, customer.expiry_date);
 
-    // Call layout handler to log email simulation
-    onTriggerEmail({
-      recipient,
-      subject,
-      body,
-      type: 'Expiry Alert'
+    const recipientList = customer.recipient_emails
+      ? customer.recipient_emails.split(',').map(e => e.trim()).filter(Boolean)
+      : [customer.email];
+
+    recipientList.forEach(recipient => {
+      onTriggerEmail({
+        recipient,
+        subject,
+        body,
+        type: emailType
+      });
     });
   };
 
+  // Filtered List
+  const filteredCustomers = customers.filter(cust => {
+    const matchSearch = 
+      cust.cname.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      cust.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (cust.note && cust.note.toLowerCase().includes(searchTerm.toLowerCase()));
+    
+    const matchStatus = statusFilter === 'all' || cust.status === statusFilter;
+
+    return matchSearch && matchStatus;
+  });
+
   return (
-    <div className="space-y-6 animate-slide-up">
+    <div className="animate-slide-up flex flex-col" style={{ minHeight: 'calc(100vh - 7rem)' }}>
+
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-800">
-        <div>
-          <h1 className="text-3xl font-extrabold tracking-tight">
-            Expiry <span className="gradient-text-purple">Management</span>
-          </h1>
-          <p className="text-slate-400 mt-1 text-sm">Automate alerts for subscription models, certificates, and domain durations.</p>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-1 flex">
-            <button
-              onClick={() => setActiveTab('customers')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
-                activeTab === 'customers' ? 'bg-brand-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              Customer Directory
-            </button>
-            <button
-              onClick={() => setActiveTab('rules')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
-                activeTab === 'rules' ? 'bg-brand-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              Active Rules
-            </button>
-          </div>
-
-          <button
-            onClick={handleOpenAddModal}
-            className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 rounded-xl text-white font-medium text-sm transition duration-200 shadow-lg shadow-brand-500/10 shimmer-btn"
-          >
-            <Plus className="w-4 h-4" />
-            Add Customer
-          </button>
-        </div>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold flex items-center gap-3 text-slate-100">
+          Expiry Control <span className="text-slate-400 text-base font-semibold ml-1">({filteredCustomers.length} total)</span>
+        </h1>
       </div>
 
-      {/* Loading state */}
-      {loading ? (
-        <div className="flex justify-center items-center py-24">
-          <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-brand-500"></div>
+      {/* Compact top bar: Search + Filter left, Add Button right */}
+      <div className="flex flex-col sm:flex-row gap-3 items-center justify-between mb-4">
+        <div className="flex gap-3 items-center w-full sm:w-auto">
+          <div className="relative w-full sm:w-72">
+            <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-500" />
+            <input
+              type="text"
+              placeholder="Search by name, email, note..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 rounded-xl text-slate-200 glass-input text-xs"
+            />
+          </div>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="px-3 py-2 rounded-xl text-slate-300 glass-input text-xs bg-dark-900 font-semibold shrink-0"
+          >
+            <option value="all">All Statuses</option>
+            <option value="active">Active</option>
+            <option value="warning">Warning</option>
+            <option value="expired">Expired</option>
+          </select>
         </div>
-      ) : activeTab === 'customers' ? (
-        /* Customers List */
-        customers.length === 0 ? (
-          <div className="glass-panel p-12 text-center rounded-2xl border border-slate-850">
-            <Calendar className="w-12 h-12 text-slate-600 mx-auto mb-4" />
-            <p className="text-slate-400 text-sm">No customer expiries scheduled yet.</p>
-            <button
-              onClick={handleOpenAddModal}
-              className="mt-4 inline-flex items-center gap-2 text-xs font-semibold text-brand-400 hover:text-brand-300 transition"
-            >
-              Add customer profile & rules &rarr;
-            </button>
-          </div>
-        ) : (
-          <div className="glass-panel rounded-2xl border border-slate-850 overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse text-sm">
-                <thead>
-                  <tr className="bg-slate-900/50 border-b border-slate-800 text-slate-400 font-semibold">
-                    <th className="p-4">Customer Details</th>
-                    <th className="p-4">Service</th>
-                    <th className="p-4">Expiry Date</th>
-                    <th className="p-4">Alert Trigger</th>
-                    <th className="p-4">Status</th>
-                    <th className="p-4 text-center">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800">
-                  {customers.map((cust) => {
-                    const serv = services.find(s => s.id === cust.service_id);
-                    const expiry = new Date(cust.expiry_date);
-                    const today = new Date();
-                    today.setHours(0,0,0,0);
-                    const daysRemaining = Math.ceil((expiry.getTime() - today.getTime()) / (1000 * 3600 * 24));
+        <button
+          onClick={handleOpenForm}
+          className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 rounded-xl text-white font-bold text-sm shadow-lg shadow-brand-500/20 transition duration-200 shrink-0 sm:w-auto w-full justify-center"
+        >
+          <UserPlus className="w-4 h-4" />
+          Add Customer
+        </button>
+      </div>
 
-                    return (
-                      <tr key={cust.id} className="hover:bg-slate-900/30 transition">
-                        {/* Details */}
-                        <td className="p-4">
-                          <div className="font-bold text-slate-200">{cust.cname}</div>
-                          <div className="text-xs text-slate-400 mt-0.5">{cust.email}</div>
-                          {cust.phone && (
-                            <div className="text-xs text-slate-500 mt-1 flex items-center gap-1">
-                              <Phone className="w-3 h-3" />
-                              {cust.phone}
-                            </div>
-                          )}
-                        </td>
-
-                        {/* Service */}
-                        <td className="p-4">
-                          <span className="px-2.5 py-1 rounded-lg bg-slate-900 text-slate-300 text-xs border border-slate-800 font-medium">
-                            {serv ? serv.name : 'Unknown Service'}
-                          </span>
-                          {cust.note && (
-                            <p className="text-xs text-slate-400 max-w-xs truncate mt-1.5" title={cust.note}>
-                              {cust.note}
-                            </p>
-                          )}
-                        </td>
-
-                        {/* Expiry Date */}
-                        <td className="p-4">
-                          <div className="font-semibold text-slate-200">
-                            {new Date(cust.expiry_date).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
-                          </div>
-                          <div className={`text-xs mt-1 font-medium ${
-                            daysRemaining <= 0 ? 'text-rose-400' : daysRemaining <= cust.notify_before_days ? 'text-orange-400' : 'text-emerald-400'
-                          }`}>
-                            {daysRemaining <= 0 ? 'Expired' : `${daysRemaining} days remaining`}
-                          </div>
-                        </td>
-
-                        {/* Rules / Alert settings */}
-                        <td className="p-4 text-xs text-slate-400">
-                          <div className="flex items-center gap-1">
-                            <Clock className="w-3.5 h-3.5 text-brand-400" />
-                            Notify {cust.notify_before_days} days before
-                          </div>
-                        </td>
-
-                        {/* Status */}
-                        <td className="p-4">
-                          <span className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${
-                            cust.status === 'active' ? 'badge-active' : cust.status === 'warning' ? 'badge-warning' : 'badge-expired'
-                          }`}>
-                            {cust.status.toUpperCase()}
-                          </span>
-                        </td>
-
-                        {/* Actions */}
-                        <td className="p-4">
-                          <div className="flex items-center justify-center gap-2">
-                            <button
-                              onClick={() => handleTriggerWarning(cust)}
-                              className="p-2 text-slate-400 hover:text-brand-400 hover:bg-slate-800/50 rounded-xl transition"
-                              title="Evaluate Rules & Dispatch Mail Alert"
-                            >
-                              <Mail className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleOpenEditModal(cust)}
-                              className="p-2 text-slate-400 hover:text-indigo-400 hover:bg-slate-800/50 rounded-xl transition"
-                              title="Edit Client"
-                            >
-                              <Edit2 className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleDelete(cust.id, cust.cname)}
-                              className="p-2 text-slate-400 hover:text-rose-400 hover:bg-slate-800/50 rounded-xl transition"
-                              title="Delete Client"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )
+      {/* Full-Height Rules Table */}
+      {filteredCustomers.length === 0 ? (
+        <div className="glass-panel p-12 text-center rounded-2xl border border-slate-850 flex-1 flex flex-col items-center justify-center">
+          <Sliders className="w-12 h-12 text-slate-600 mx-auto mb-4" />
+          <p className="text-slate-400 text-sm">No expiry rules found matching your criteria.</p>
+          <button
+            onClick={handleOpenForm}
+            className="mt-4 inline-flex items-center gap-2 text-xs font-semibold text-brand-400 hover:text-brand-300 transition"
+          >
+            Create your first expiry rule &rarr;
+          </button>
+        </div>
       ) : (
-        /* Rules Tab Explanation */
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {/* Expiry Rule Card */}
-          <div className="glass-panel p-6 rounded-2xl border border-slate-850 space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-brand-500/10 rounded-2xl border border-brand-500/20">
-                <Clock className="w-6 h-6 text-brand-400" />
-              </div>
-              <div>
-                <h3 className="font-bold text-lg text-slate-200">Rule 1: Expiry Alert Trigger</h3>
-                <p className="text-xs text-slate-400">Triggered prior to system expiration</p>
-              </div>
-            </div>
+        <div className="glass-panel rounded-2xl border border-slate-850 overflow-hidden flex-1 flex flex-col">
+          <div className="overflow-x-auto flex-1">
+            <table className="w-full text-left border-collapse text-sm h-full">
+              <thead>
+                <tr className="bg-slate-900/50 border-b border-slate-800 text-slate-400 font-semibold text-xs">
+                  <th className="p-4">Customer</th>
+                  <th className="p-4">Service</th>
+                  <th className="p-4">Expiry</th>
+                  <th className="p-4">Send To</th>
+                  <th className="p-4">Status</th>
+                  <th className="p-4 text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800 text-xs">
+                {filteredCustomers.map((cust) => {
+                  const serv = services.find(s => s.id === cust.service_id);
+                  const expiry = new Date(cust.expiry_date);
+                  const today = new Date();
+                  today.setHours(0,0,0,0);
+                  const daysRemaining = Math.ceil((expiry.getTime() - today.getTime()) / (1000 * 3600 * 24));
 
-            <div className="bg-dark-950/60 p-4 rounded-xl border border-slate-900 space-y-3 text-sm">
-              <p className="text-slate-300 font-medium">Condition:</p>
-              <p className="text-xs text-slate-400">
-                If the remaining duration of a customer's active service falls below or matches the configured <code>Notify before expiry</code> threshold (days), the customer status is designated as <span className="text-orange-400 font-semibold">Warning</span>.
-              </p>
-              <div className="h-px bg-slate-800 my-2"></div>
-              <p className="text-slate-300 font-medium">Action Dispatcher:</p>
-              <p className="text-xs text-slate-400">
-                Dispatches a customized notice warning containing service dates, duration remaining, and client renewal invoice info via Gmail SMTP to the global administrator recipient.
-              </p>
-            </div>
-          </div>
+                  return (
+                    <tr 
+                      key={cust.id} 
+                      className={`hover:bg-slate-900/30 transition group ${
+                        editingId === cust.id ? 'bg-purple-950/20' : ''
+                      }`}
+                    >
+                      {/* Customer Info */}
+                      <td className="p-4">
+                        <div className="font-bold text-slate-200 text-sm">{cust.cname}</div>
+                        <div className="text-slate-400 mt-0.5">{cust.email}</div>
+                        {cust.phone && (
+                          <div className="text-slate-500 mt-0.5">{cust.phone}</div>
+                        )}
+                      </td>
 
-          {/* Expired Rule Card */}
-          <div className="glass-panel p-6 rounded-2xl border border-slate-850 space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-rose-500/10 rounded-2xl border border-rose-500/20">
-                <ShieldAlert className="w-6 h-6 text-rose-400" />
-              </div>
-              <div>
-                <h3 className="font-bold text-lg text-slate-200">Rule 2: Terminus / Expired Check</h3>
-                <p className="text-xs text-slate-400">Triggered upon target expiration date</p>
-              </div>
-            </div>
+                      {/* Service */}
+                      <td className="p-4">
+                        {serv && (
+                          <span className="inline-block px-2.5 py-1 bg-slate-900 text-slate-300 rounded-lg border border-slate-800 text-[11px] font-semibold">
+                            {serv.name}
+                          </span>
+                        )}
+                      </td>
 
-            <div className="bg-dark-950/60 p-4 rounded-xl border border-slate-900 space-y-3 text-sm">
-              <p className="text-slate-300 font-medium">Condition:</p>
-              <p className="text-xs text-slate-400">
-                If the remaining duration of a customer's service date becomes less than or equal to 0, the customer's status transitions automatically to <span className="text-rose-400 font-semibold">Expired</span>.
-              </p>
-              <div className="h-px bg-slate-800 my-2"></div>
-              <p className="text-slate-300 font-medium">Action Dispatcher:</p>
-              <p className="text-xs text-slate-400">
-                Instantly generates a critical warning email to suspend access, flags the billing department, and alerts the customer email directly concerning immediate service deactivation.
-              </p>
-            </div>
+                      {/* Expiry Date */}
+                      <td className="p-4">
+                        <div className="font-bold text-slate-200">
+                          {expiry.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                        </div>
+                        <div className={`mt-1 font-semibold ${
+                          daysRemaining <= 0 
+                            ? 'text-rose-400' 
+                            : daysRemaining <= cust.notify_before_days 
+                              ? 'text-orange-400' 
+                              : 'text-emerald-400'
+                        }`}>
+                          {daysRemaining <= 0 ? `Expired ${Math.abs(daysRemaining)}d ago` : `${daysRemaining}d left`}
+                        </div>
+                        <div className="text-[10px] text-slate-500 mt-0.5">
+                          Alert: {cust.notify_before_days}d before
+                        </div>
+                      </td>
+
+                      {/* Send To */}
+                      <td className="p-4">
+                        <div className="text-slate-300 text-[11px] max-w-[160px] truncate" title={cust.recipient_emails || cust.email}>
+                          {cust.recipient_emails || cust.email}
+                        </div>
+                      </td>
+
+                      {/* Status Badge */}
+                      <td className="p-4">
+                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase border ${
+                          cust.status === 'active' 
+                            ? 'badge-active' 
+                            : cust.status === 'warning' 
+                              ? 'badge-warning' 
+                              : 'badge-expired'
+                        }`}>
+                          {cust.status.toUpperCase()}
+                        </span>
+                      </td>
+
+                      {/* Actions */}
+                      <td className="p-4">
+                        <div className="flex items-center justify-center gap-1.5 opacity-80 group-hover:opacity-100 transition-opacity">
+                          <button
+                            onClick={() => handleTriggerWarning(cust)}
+                            className="p-2 text-slate-400 hover:text-brand-400 hover:bg-slate-800/40 rounded-xl transition duration-150"
+                            title="Send Email Alert"
+                          >
+                            <Mail className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleLoadEdit(cust)}
+                            className="p-2 text-slate-400 hover:text-indigo-400 hover:bg-slate-800/40 rounded-xl transition duration-150"
+                            title="Edit Rule"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(cust.id, cust.cname)}
+                            className="p-2 text-slate-400 hover:text-rose-400 hover:bg-slate-800/40 rounded-xl transition duration-150"
+                            title="Delete Rule"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
 
-      {/* Add / Edit Client Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="glass-panel w-full max-w-lg rounded-2xl border border-slate-800 shadow-2xl relative overflow-hidden animate-slide-up">
-            <div className="h-1.5 w-full bg-gradient-to-r from-brand-600 to-indigo-600"></div>
+      {/* Modal Form Overlay */}
+      {isFormOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fadeIn">
+          <div className="w-full max-w-xl bg-slate-800 border border-slate-700 rounded-xl shadow-2xl flex flex-col max-h-full">
+            
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-700">
+              <h2 className="text-lg font-bold text-slate-100">{editingId ? 'Edit Rule' : 'Add Customer'}</h2>
+              <button onClick={handleCloseForm} className="text-slate-400 hover:text-slate-200 transition">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-slate-100 flex items-center gap-2">
-                  <Calendar className="w-5 h-5 text-brand-400" />
-                  {editingId ? 'Modify Customer Record' : 'Enroll Customer & Expiry Rule'}
-                </h3>
-                <button onClick={() => setIsModalOpen(false)} className="p-1 rounded-xl text-slate-400 hover:bg-slate-900 transition">
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
+            {/* Scrollable Body */}
+            <div className="p-6 overflow-y-auto">
               {services.length === 0 ? (
-                <div className="py-6 text-center text-sm text-slate-400 space-y-3">
-                  <p>You must create a service in Settings first before enrolling customers.</p>
-                  <button
-                    onClick={() => {
-                      setIsModalOpen(false);
-                      onNotify('warning', 'Please navigate to Settings > Service Catalog to configure services');
-                    }}
-                    className="px-4 py-2 bg-brand-600 text-white rounded-xl text-xs font-semibold"
-                  >
-                    Go to Settings
-                  </button>
+                <div className="py-12 text-center text-sm text-slate-500 space-y-3">
+                  <Info className="w-8 h-8 text-slate-600 mx-auto" />
+                  <p>You must configure services in System Settings first.</p>
                 </div>
               ) : (
                 <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Customer Name *</label>
+                      <label className="block text-[11px] font-bold text-slate-300 mb-1.5">Customer Name <span className="text-rose-500">*</span></label>
                       <input
                         type="text"
-                        placeholder="e.g. Aiden Vance"
                         value={cname}
                         onChange={(e) => setCname(e.target.value)}
-                        className="w-full px-4 py-2 rounded-xl text-slate-200 glass-input text-sm"
+                        className="w-full px-4 py-2.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-200 text-sm focus:border-brand-500 focus:outline-none"
                         required
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Email Address *</label>
-                      <input
-                        type="email"
-                        placeholder="e.g. client@domain.com"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="w-full px-4 py-2 rounded-xl text-slate-200 glass-input text-sm"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Phone Number</label>
-                      <input
-                        type="tel"
-                        placeholder="e.g. +1 555-0199"
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                        className="w-full px-4 py-2 rounded-xl text-slate-200 glass-input text-sm"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Service Dropdown *</label>
+                      <label className="block text-[11px] font-bold text-slate-300 mb-1.5">Service <span className="text-rose-500">*</span></label>
                       <select
                         value={serviceId}
                         onChange={(e) => setServiceId(e.target.value)}
-                        className="w-full px-4 py-2 rounded-xl text-slate-200 glass-input text-sm bg-dark-900"
+                        className="w-full px-4 py-2.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-200 text-sm focus:border-brand-500 focus:outline-none"
                         required
                       >
-                        <option value="" disabled>Select service</option>
                         {services.map(s => (
                           <option key={s.id} value={s.id}>{s.name}</option>
                         ))}
@@ -489,55 +527,87 @@ export default function ExpiryManagement({ onNotify, onTriggerEmail }) {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Expiry Date *</label>
+                      <label className="block text-[11px] font-bold text-slate-300 mb-1.5">Email <span className="text-rose-500">*</span></label>
                       <input
-                        type="date"
-                        value={expiryDate}
-                        onChange={(e) => setExpiryDate(e.target.value)}
-                        className="w-full px-4 py-2 rounded-xl text-slate-200 glass-input text-sm"
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="w-full px-4 py-2.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-200 text-sm focus:border-brand-500 focus:outline-none"
                         required
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Notify Before Expiry (Days) *</label>
+                      <label className="block text-[11px] font-bold text-slate-300 mb-1.5">Phone</label>
+                      <input
+                        type="tel"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        className="w-full px-4 py-2.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-200 text-sm focus:border-brand-500 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-300 mb-1.5">Expiry Date <span className="text-rose-500">*</span></label>
+                      <input
+                        type="date"
+                        value={expiryDate}
+                        onChange={(e) => setExpiryDate(e.target.value)}
+                        className="w-full px-4 py-2.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-200 text-sm focus:border-brand-500 focus:outline-none"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-300 mb-1.5">Notify Before (Days) <span className="text-rose-500">*</span></label>
                       <input
                         type="number"
                         min="1"
                         max="90"
                         value={notifyBeforeDays}
                         onChange={(e) => setNotifyBeforeDays(parseInt(e.target.value) || 7)}
-                        className="w-full px-4 py-2 rounded-xl text-slate-200 glass-input text-sm"
+                        className="w-full px-4 py-2.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-200 text-sm focus:border-brand-500 focus:outline-none"
                         required
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Note</label>
-                    <textarea
-                      placeholder="Enter subscription rules, domain provider details or other remarks..."
-                      value={note}
-                      onChange={(e) => setNote(e.target.value)}
-                      rows="3"
-                      className="w-full px-4 py-2 rounded-xl text-slate-200 glass-input text-sm resize-none"
+                    <label className="block text-[11px] font-bold text-slate-300 mb-1.5">Send Mail To</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. admin@company.com"
+                      value={recipientEmails}
+                      onChange={(e) => setRecipientEmails(e.target.value)}
+                      className="w-full px-4 py-2.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-200 text-sm focus:border-brand-500 focus:outline-none"
                     />
                   </div>
 
-                  <div className="pt-2 flex justify-end gap-3 text-sm">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-300 mb-1.5">Note</label>
+                    <textarea
+                      value={note}
+                      onChange={(e) => setNote(e.target.value)}
+                      rows="2"
+                      className="w-full px-4 py-2 rounded-lg bg-slate-900 border border-slate-700 text-slate-200 text-sm focus:border-brand-500 focus:outline-none resize-none"
+                    />
+                  </div>
+
+                  <div className="pt-4 flex justify-end gap-3 text-sm">
                     <button
                       type="button"
-                      onClick={() => setIsModalOpen(false)}
-                      className="px-4 py-2 bg-slate-900 text-slate-300 hover:text-white rounded-xl transition"
+                      onClick={handleCloseForm}
+                      className="px-4 py-2 bg-slate-600 text-slate-100 hover:bg-slate-500 rounded-lg transition duration-150 font-semibold"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
-                      className="px-5 py-2 bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 rounded-xl text-white font-medium shadow-lg shadow-brand-500/10 transition duration-200 shimmer-btn"
+                      className="px-6 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-white font-bold transition duration-200"
                     >
-                      {editingId ? 'Update Client' : 'Schedule Rule'}
+                      {editingId ? 'Update Rule' : 'Save Rule'}
                     </button>
                   </div>
                 </form>
@@ -546,6 +616,7 @@ export default function ExpiryManagement({ onNotify, onTriggerEmail }) {
           </div>
         </div>
       )}
+
     </div>
   );
 }

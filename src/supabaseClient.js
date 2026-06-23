@@ -22,13 +22,20 @@ const DEFAULT_LOCAL_DATA = {
     { id: '5', name: 'SEO Services', description: 'Search engine optimization retainer', created_at: new Date().toISOString() }
   ],
   customers: [
-    { id: 'c1', cname: 'Aiden Vance', email: 'aiden@example.com', phone: '+1-555-0199', service_id: '1', note: 'Domain astra.com primary setup', notify_before_days: 7, expiry_date: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], status: 'warning', created_at: new Date().toISOString() },
-    { id: 'c2', cname: 'Zara Thorne', email: 'zara@example.com', phone: '+1-555-0144', service_id: '2', note: 'Premium Node VPS server configuration', notify_before_days: 10, expiry_date: new Date(Date.now() + 25 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], status: 'active', created_at: new Date().toISOString() },
-    { id: 'c3', cname: 'Damon Hunt', email: 'damon@example.com', phone: '+1-555-0188', service_id: '3', note: 'E-commerce checkout SSL expired!', notify_before_days: 3, expiry_date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], status: 'expired', created_at: new Date().toISOString() }
+    { id: 'c1', cname: 'Aiden Vance', domain_name: 'astra.com', email: 'aiden@example.com', phone: '+1-555-0199', service_id: '1', note: 'Domain astra.com primary setup', notify_before_days: 7, expiry_date: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], status: 'warning', priority: 'high', auto_renewal: false, renewal_cost: 14.99, send_email_reminder: true, recipient_emails: 'aiden@example.com,admin@astra.com', created_at: new Date().toISOString() },
+    { id: 'c2', cname: 'Zara Thorne', domain_name: 'thorne-hosting.net', email: 'zara@example.com', phone: '+1-555-0144', service_id: '2', note: 'Premium Node VPS server configuration', notify_before_days: 10, expiry_date: new Date(Date.now() + 25 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], status: 'active', priority: 'medium', auto_renewal: true, renewal_cost: 89.99, send_email_reminder: true, recipient_emails: 'zara@example.com', created_at: new Date().toISOString() },
+    { id: 'c3', cname: 'Damon Hunt', domain_name: 'hunt-shop.com', email: 'damon@example.com', phone: '+1-555-0188', service_id: '3', note: 'E-commerce checkout SSL expired!', notify_before_days: 3, expiry_date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], status: 'expired', priority: 'low', auto_renewal: false, renewal_cost: 0, send_email_reminder: true, recipient_emails: 'damon@example.com,billing@hunt-shop.com', created_at: new Date().toISOString() }
+  ],
+  platforms: [
+    { platform_name: 'GitHub', url: 'https://github.com', logo: 'https://cdn-icons-png.flaticon.com/512/25/25231.png', created_at: new Date().toISOString() },
+    { platform_name: 'Vercel Console', url: 'https://vercel.com', logo: 'https://cdn.svgporn.com/logos/vercel-icon.svg', created_at: new Date().toISOString() },
+    { platform_name: 'Google Workspace', url: 'https://workspace.google.com', logo: 'https://cdn.svgporn.com/logos/google-icon.svg', created_at: new Date().toISOString() },
+    { platform_name: 'AWS Management Console', url: 'https://aws.amazon.com', logo: 'https://cdn.svgporn.com/logos/aws.svg', created_at: new Date().toISOString() },
+    { platform_name: 'Slack Workspace', url: 'https://slack.com', logo: 'https://cdn.svgporn.com/logos/slack-icon.svg', created_at: new Date().toISOString() }
   ],
   passwords: [
-    { id: 'p1', platform_name: 'GitHub', platform_url: 'https://github.com', username: 'project_astra_dev', password: 'AstraSecurePass2026!', created_at: new Date().toISOString() },
-    { id: 'p2', platform_name: 'Vercel Console', platform_url: 'https://vercel.com', username: 'admin@astra.com', password: 'VercelCloudSec#99', created_at: new Date().toISOString() }
+    { id: 'p1', platform_name: 'GitHub', username: 'project_astra_dev', password: 'AstraSecurePass2026!', created_at: new Date().toISOString() },
+    { id: 'p2', platform_name: 'Vercel Console', username: 'admin@astra.com', password: 'VercelCloudSec#99', created_at: new Date().toISOString() }
   ],
   payment_reminders: [
     { id: 'r1', customer_name: 'Aiden Vance', service_id: '1', to_pay_date: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], amount: 49.99, currency: 'USD', status: 'pending', notify_days_before: 3, created_at: new Date().toISOString() },
@@ -55,8 +62,14 @@ const DEFAULT_LOCAL_DATA = {
           subject: 'Warning: Your service {service_name} expires in {days} days',
           body: 'Dear {customer_name},\n\nThis is an automated reminder that your subscription for {service_name} is expiring on {expiry_date}.\n\nPlease renew it to avoid service interruption.\n\nBest regards,\nProject Astra'
         },
+        expiry_expired: {
+          subject: 'Critical: Your service {service_name} has expired',
+          body: 'Dear {customer_name},\n\nThis is to inform you that your subscription for {service_name} expired on {expiry_date}.\n\nPlease renew it immediately to avoid deactivation.\n\nBest regards,\nProject Astra'
+        },
         email_recipient: {
-          to_email: 'admin@projectastra.com'
+          to_email: 'admin@projectastra.com',
+          warning_recipient_type: 'admin',
+          expired_recipient_type: 'customer'
         },
         payment_reminder: {
           subject: 'Reminder: Payment due for {service_name}',
@@ -128,7 +141,7 @@ class MockSupabaseQueryBuilder {
   upsert(values) {
     const valueArray = Array.isArray(values) ? values : [values];
     valueArray.forEach(item => {
-      const idx = this.db[this.tableName].findIndex(x => x.key === item.key || x.id === item.id);
+      const idx = this.db[this.tableName].findIndex(x => x.key === item.key || x.id === item.id || (x.platform_name && x.platform_name === item.platform_name));
       if (idx > -1) {
         this.db[this.tableName][idx] = { ...this.db[this.tableName][idx], ...item, updated_at: new Date().toISOString() };
       } else {

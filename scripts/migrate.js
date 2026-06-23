@@ -30,10 +30,13 @@ rl.question('\nEnter your Supabase Database Password: ', (password) => {
   }
 
   // Construct Connection URI
-  const connectionString = `postgresql://${encodeURIComponent(user)}:${encodeURIComponent(password)}@${host}:${port}/${database}?sslmode=require`;
+  const connectionString = `postgresql://${encodeURIComponent(user)}:${encodeURIComponent(password)}@${host}:${port}/${database}`;
 
   const client = new pg.Client({
-    connectionString
+    connectionString,
+    ssl: {
+      rejectUnauthorized: false
+    }
   });
 
   console.log('\nConnecting to PostgreSQL database...');

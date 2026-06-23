@@ -200,18 +200,18 @@ export default function PaymentReminders({ onNotify, onTriggerEmail }) {
   };
 
   return (
-    <div className="space-y-6 animate-slide-up">
+    <div className="animate-slide-up flex flex-col h-full" style={{ minHeight: 'calc(100vh - 4rem)' }}>
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-800">
-        <div>
-          <h1 className="text-3xl font-extrabold tracking-tight">
-            Payment <span className="gradient-text-purple">Reminders</span>
-          </h1>
-          <p className="text-slate-400 mt-1 text-sm">Create and automate client billing notifications, invoice deadlines, and currency tracking.</p>
-        </div>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold flex items-center gap-3 text-slate-100">
+          Billing Reminders <span className="text-slate-400 text-base font-semibold ml-1">({reminders.length} total)</span>
+        </h1>
+      </div>
 
-        <div className="flex items-center gap-3">
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-1 flex">
+      {/* Compact Top Bar */}
+      <div className="flex flex-col sm:flex-row gap-3 items-center justify-between mb-4">
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-1 flex shrink-0">
             <button
               onClick={() => setActiveTab('active')}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
@@ -229,63 +229,17 @@ export default function PaymentReminders({ onNotify, onTriggerEmail }) {
               Settled / Paid
             </button>
           </div>
-
-          <button
-            onClick={handleOpenAddModal}
-            className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 rounded-xl text-white font-medium text-sm transition duration-200 shadow-lg shadow-brand-500/10 shimmer-btn"
-          >
-            <Plus className="w-4 h-4" />
-            Add Reminder
-          </button>
         </div>
+        <button
+          onClick={handleOpenAddModal}
+          className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 rounded-xl text-white font-bold text-sm shadow-lg shadow-brand-500/20 transition duration-200 shrink-0 sm:w-auto w-full justify-center"
+        >
+          <Plus className="w-4 h-4" />
+          Add Reminder
+        </button>
       </div>
 
-      {/* Grid Summary Stats */}
-      {!loading && filteredReminders.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="glass-panel p-4 rounded-xl border border-slate-850 flex items-center gap-4">
-            <div className="p-3 bg-indigo-500/10 rounded-xl border border-indigo-500/20 text-indigo-400">
-              <DollarSign className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Total Dues (USD)</p>
-              <h4 className="text-xl font-extrabold text-slate-200 mt-0.5">
-                {formatCurrency(
-                  reminders.filter(r => r.status !== 'paid' && r.currency === 'USD').reduce((sum, r) => sum + parseFloat(r.amount), 0),
-                  'USD'
-                )}
-              </h4>
-            </div>
-          </div>
 
-          <div className="glass-panel p-4 rounded-xl border border-slate-850 flex items-center gap-4">
-            <div className="p-3 bg-emerald-500/10 rounded-xl border border-emerald-500/20 text-emerald-400">
-              <Wallet className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Total Dues (NPR)</p>
-              <h4 className="text-xl font-extrabold text-slate-200 mt-0.5">
-                {formatCurrency(
-                  reminders.filter(r => r.status !== 'paid' && r.currency === 'NPR').reduce((sum, r) => sum + parseFloat(r.amount), 0),
-                  'NPR'
-                )}
-              </h4>
-            </div>
-          </div>
-
-          <div className="glass-panel p-4 rounded-xl border border-slate-850 flex items-center gap-4">
-            <div className="p-3 bg-brand-500/10 rounded-xl border border-brand-500/20 text-brand-400">
-              <Users className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Pending Accounts</p>
-              <h4 className="text-xl font-extrabold text-slate-200 mt-0.5">
-                {reminders.filter(r => r.status !== 'paid').length} clients
-              </h4>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Main List Table */}
       {loading ? (
@@ -293,7 +247,7 @@ export default function PaymentReminders({ onNotify, onTriggerEmail }) {
           <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-brand-500"></div>
         </div>
       ) : filteredReminders.length === 0 ? (
-        <div className="glass-panel p-12 text-center rounded-2xl border border-slate-850">
+        <div className="glass-panel p-12 text-center rounded-2xl border border-slate-850 flex-1 flex flex-col items-center justify-center">
           <DollarSign className="w-12 h-12 text-slate-600 mx-auto mb-4" />
           <p className="text-slate-400 text-sm">No payment reminders scheduled here.</p>
           <button
@@ -304,9 +258,9 @@ export default function PaymentReminders({ onNotify, onTriggerEmail }) {
           </button>
         </div>
       ) : (
-        <div className="glass-panel rounded-2xl border border-slate-850 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-sm">
+        <div className="glass-panel rounded-2xl border border-slate-850 overflow-hidden flex-1 flex flex-col">
+          <div className="overflow-x-auto flex-1">
+            <table className="w-full text-left border-collapse text-sm h-full">
               <thead>
                 <tr className="bg-slate-900/50 border-b border-slate-800 text-slate-400 font-semibold">
                   <th className="p-4">Customer</th>
@@ -422,21 +376,19 @@ export default function PaymentReminders({ onNotify, onTriggerEmail }) {
 
       {/* Add / Edit Reminder Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="glass-panel w-full max-w-lg rounded-2xl border border-slate-800 shadow-2xl relative overflow-hidden animate-slide-up">
-            <div className="h-1.5 w-full bg-gradient-to-r from-brand-600 to-indigo-600"></div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fadeIn">
+          <div className="w-full max-w-xl bg-slate-800 border border-slate-700 rounded-xl shadow-2xl flex flex-col max-h-full">
+            
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-700">
+              <h2 className="text-lg font-bold text-slate-100">{editingId ? 'Edit Reminder' : 'Add Reminder'}</h2>
+              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-200 transition">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-slate-100 flex items-center gap-2">
-                  <Calendar className="w-5 h-5 text-brand-400" />
-                  {editingId ? 'Modify Payment Reminder' : 'Add Payment Reminder'}
-                </h3>
-                <button onClick={() => setIsModalOpen(false)} className="p-1 rounded-xl text-slate-400 hover:bg-slate-900 transition">
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
+            {/* Scrollable Body */}
+            <div className="p-6 overflow-y-auto">
               {services.length === 0 ? (
                 <div className="py-6 text-center text-sm text-slate-400 space-y-3">
                   <p>You must create a service in Settings first before adding reminders.</p>
@@ -452,27 +404,26 @@ export default function PaymentReminders({ onNotify, onTriggerEmail }) {
                 </div>
               ) : (
                 <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Customer Name *</label>
+                      <label className="block text-[11px] font-bold text-slate-300 mb-1.5">Customer Name <span className="text-rose-500">*</span></label>
                       <input
                         type="text"
-                        placeholder="e.g. Aiden Vance"
                         value={customerName}
                         onChange={(e) => setCustomerName(e.target.value)}
-                        className="w-full px-4 py-2 rounded-xl text-slate-200 glass-input text-sm"
+                        className="w-full px-4 py-2.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-200 text-sm focus:border-brand-500 focus:outline-none"
                         required
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Associated Service *</label>
+                      <label className="block text-[11px] font-bold text-slate-300 mb-1.5">Service <span className="text-rose-500">*</span></label>
                       <select
                         value={serviceId}
                         onChange={(e) => setServiceId(e.target.value)}
-                        className="w-full px-4 py-2 rounded-xl text-slate-200 glass-input text-sm bg-dark-900"
+                        className="w-full px-4 py-2.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-200 text-sm focus:border-brand-500 focus:outline-none"
                         required
                       >
-                        <option value="" disabled>Select service</option>
+                        <option value="">Select Service</option>
                         {services.map(s => (
                           <option key={s.id} value={s.id}>{s.name}</option>
                         ))}
@@ -480,97 +431,86 @@ export default function PaymentReminders({ onNotify, onTriggerEmail }) {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">To Pay Date *</label>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="col-span-1">
+                      <label className="block text-[11px] font-bold text-slate-300 mb-1.5">To Pay Date <span className="text-rose-500">*</span></label>
                       <input
                         type="date"
                         value={toPayDate}
                         onChange={(e) => setToPayDate(e.target.value)}
-                        className="w-full px-4 py-2 rounded-xl text-slate-200 glass-input text-sm"
+                        className="w-full px-4 py-2.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-200 text-sm focus:border-brand-500 focus:outline-none"
                         required
                       />
                     </div>
-                    <div>
-                      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Notify Before Pay Date (Days)</label>
-                      <input
-                        type="number"
-                        min="1"
-                        max="90"
-                        value={notifyDaysBefore}
-                        onChange={(e) => setNotifyDaysBefore(parseInt(e.target.value) || 3)}
-                        className="w-full px-4 py-2 rounded-xl text-slate-200 glass-input text-sm"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="col-span-2">
-                      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Amount to Pay *</label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        placeholder="e.g. 1500.00"
-                        value={amount}
-                        onChange={(e) => setAmount(e.target.value)}
-                        className="w-full px-4 py-2 rounded-xl text-slate-200 glass-input text-sm"
-                        required
-                      />
-                    </div>
-                    <div className="col-span-1">
-                      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Currency *</label>
-                      <div className="flex bg-slate-900 border border-slate-800 rounded-xl p-1 h-[42px] items-center">
-                        <button
-                          type="button"
-                          onClick={() => setCurrency('USD')}
-                          className={`flex-1 py-1 rounded-lg text-xs font-bold transition ${
-                            currency === 'USD' ? 'bg-brand-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
-                          }`}
+                    <div className="col-span-2 grid grid-cols-3 gap-4">
+                      <div className="col-span-2">
+                        <label className="block text-[11px] font-bold text-slate-300 mb-1.5">Amount <span className="text-rose-500">*</span></label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          placeholder="0.00"
+                          value={amount}
+                          onChange={(e) => setAmount(e.target.value)}
+                          className="w-full px-4 py-2.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-200 text-sm focus:border-brand-500 focus:outline-none"
+                          required
+                        />
+                      </div>
+                      <div className="col-span-1">
+                        <label className="block text-[11px] font-bold text-slate-300 mb-1.5">Currency</label>
+                        <select
+                          value={currency}
+                          onChange={(e) => setCurrency(e.target.value)}
+                          className="w-full px-4 py-2.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-200 text-sm focus:border-brand-500 focus:outline-none"
                         >
-                          USD
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setCurrency('NPR')}
-                          className={`flex-1 py-1 rounded-lg text-xs font-bold transition ${
-                            currency === 'NPR' ? 'bg-brand-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
-                          }`}
-                        >
-                          NPR
-                        </button>
+                          <option value="USD">USD ($)</option>
+                          <option value="EUR">EUR (€)</option>
+                          <option value="GBP">GBP (£)</option>
+                          <option value="INR">INR (₹)</option>
+                        </select>
                       </div>
                     </div>
                   </div>
 
-                  {editingId && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Billing Status</label>
+                      <label className="block text-[11px] font-bold text-slate-300 mb-1.5">Status</label>
                       <select
                         value={status}
                         onChange={(e) => setStatus(e.target.value)}
-                        className="w-full px-4 py-2 rounded-xl text-slate-200 glass-input text-sm bg-dark-900"
+                        className="w-full px-4 py-2.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-200 text-sm focus:border-brand-500 focus:outline-none"
                       >
                         <option value="pending">Pending</option>
                         <option value="paid">Paid</option>
                         <option value="overdue">Overdue</option>
                       </select>
                     </div>
-                  )}
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-300 mb-1.5">Notify Days Before <span className="text-rose-500">*</span></label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="30"
+                        value={notifyDaysBefore}
+                        onChange={(e) => setNotifyDaysBefore(parseInt(e.target.value) || 3)}
+                        className="w-full px-4 py-2.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-200 text-sm focus:border-brand-500 focus:outline-none"
+                        required
+                      />
+                    </div>
+                  </div>
 
-                  <div className="pt-2 flex justify-end gap-3 text-sm">
+                  <div className="pt-4 flex justify-end gap-3 text-sm">
                     <button
                       type="button"
                       onClick={() => setIsModalOpen(false)}
-                      className="px-4 py-2 bg-slate-900 text-slate-300 hover:text-white rounded-xl transition"
+                      className="px-4 py-2 bg-slate-600 text-slate-100 hover:bg-slate-500 rounded-lg transition duration-150 font-semibold"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
-                      className="px-5 py-2 bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 rounded-xl text-white font-medium shadow-lg shadow-brand-500/10 transition duration-200 shimmer-btn"
+                      className="px-6 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-white font-bold transition duration-200"
                     >
-                      {editingId ? 'Save Changes' : 'Schedule Reminder'}
+                      {editingId ? 'Update Reminder' : 'Save Reminder'}
                     </button>
                   </div>
                 </form>

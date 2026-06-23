@@ -1,5 +1,4 @@
--- Supabase Schema for Project Astra
--- To run this, copy the SQL below and execute it in your Supabase SQL Editor.
+-- Initial Schema Migration for Project Astra
 
 -- Enable UUID extension if not enabled
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
