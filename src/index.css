@@ -1,0 +1,179 @@
+@import "tailwindcss";
+
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
+
+@theme {
+  --color-brand-50: #f5f3ff;
+  --color-brand-100: #ede9fe;
+  --color-brand-200: #ddd6fe;
+  --color-brand-300: #c4b5fd;
+  --color-brand-400: #a78bfa;
+  --color-brand-500: #8b5cf6;
+  --color-brand-600: #7c3aed;
+  --color-brand-700: #6d28d9;
+  --color-brand-800: #5b21b6;
+  --color-brand-900: #4c1d95;
+  --color-brand-950: #0f051d;
+
+  --color-dark-50: #f8fafc;
+  --color-dark-100: #f1f5f9;
+  --color-dark-800: #1e293b;
+  --color-dark-900: #0f172a;
+  --color-dark-950: #030712;
+
+  --color-neon-blue: #38bdf8;
+  --color-neon-purple: #c084fc;
+  --color-neon-green: #4ade80;
+  --color-neon-rose: #fb7185;
+
+  --font-sans: 'Outfit', 'Inter', sans-serif;
+
+  --animate-pulse-slow: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --animate-glow: glow 2s ease-in-out infinite alternate;
+
+  @keyframes glow {
+    0% { box-shadow: 0 0 5px rgba(139, 92, 246, 0.2), 0 0 10px rgba(139, 92, 246, 0.2); }
+    100% { box-shadow: 0 0 15px rgba(139, 92, 246, 0.6), 0 0 25px rgba(139, 92, 246, 0.4); }
+  }
+}
+
+@utility glass-panel {
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+@utility glass-panel-hover {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  &:hover {
+    background: rgba(15, 23, 42, 0.6);
+    border-color: rgba(139, 92, 246, 0.2);
+    box-shadow: 0 10px 30px -10px rgba(139, 92, 246, 0.15);
+    transform: translateY(-2px);
+  }
+}
+
+@utility glass-card-glow-purple {
+  box-shadow: 0 0 40px -10px rgba(139, 92, 246, 0.15);
+}
+
+@utility glass-card-glow-blue {
+  box-shadow: 0 0 40px -10px rgba(56, 189, 248, 0.15);
+}
+
+@utility glass-input {
+  background: rgba(3, 7, 18, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: all 0.2s ease-in-out;
+  &:focus {
+    background: rgba(3, 7, 18, 0.85);
+    border-color: rgba(139, 92, 246, 0.5);
+    box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.25);
+    outline: none;
+  }
+}
+
+@utility badge-active {
+  background: rgba(74, 222, 128, 0.1);
+  color: #4ade80;
+  border: 1px solid rgba(74, 222, 128, 0.2);
+}
+
+@utility badge-warning {
+  background: rgba(251, 146, 60, 0.1);
+  color: #fb923c;
+  border: 1px solid rgba(251, 146, 60, 0.2);
+}
+
+@utility badge-expired {
+  background: rgba(251, 113, 133, 0.1);
+  color: #fb7185;
+  border: 1px solid rgba(251, 113, 133, 0.2);
+}
+
+@utility gradient-text-purple {
+  background-clip: text;
+  color: transparent;
+  background-image: linear-gradient(to right, var(--color-violet-400), var(--color-fuchsia-400), var(--color-sky-400));
+}
+
+@utility gradient-text-gold {
+  background-clip: text;
+  color: transparent;
+  background-image: linear-gradient(to right, var(--color-amber-300), var(--color-orange-400), var(--color-rose-400));
+}
+
+@utility animate-slide-up {
+  animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@utility shimmer-btn {
+  position: relative;
+  overflow: hidden;
+  &::after {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    transform: translateX(-100%);
+    background-image: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(255, 255, 255, 0.15) 20%,
+      rgba(255, 255, 255, 0.3) 60%,
+      rgba(255, 255, 255, 0) 100%
+    );
+    animation: shimmer 2.5s infinite;
+    content: '';
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@layer base {
+  body {
+    @apply bg-dark-950 text-slate-100 font-sans antialiased overflow-x-hidden;
+    background-image: 
+      radial-gradient(circle at 10% 20%, rgba(139, 92, 246, 0.08) 0%, transparent 40%),
+      radial-gradient(circle at 90% 80%, rgba(56, 189, 248, 0.08) 0%, transparent 40%),
+      radial-gradient(circle at 50% 50%, rgba(2, 6, 23, 1) 0%, rgba(3, 7, 18, 1) 100%);
+    background-attachment: fixed;
+    min-height: 100vh;
+  }
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(3, 7, 18, 0.5);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(139, 92, 246, 0.3);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 92, 246, 0.5);
+}
