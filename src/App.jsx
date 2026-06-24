@@ -11,15 +11,9 @@ import {
   LayoutDashboard, 
   CalendarClock, 
   KeyRound, 
-  CreditCard, 
   Settings as SettingsIcon, 
   Mail, 
-  Bell, 
-  Database,
-  Menu,
   X,
-  Trash2,
-  Inbox,
   ChevronDown,
   DollarSign,
   Send
@@ -34,8 +28,6 @@ export default function App() {
   
   // SMTP Simulation logs
   const [emailLogs, setEmailLogs] = useState([]);
-  const [isMailDrawerOpen, setIsMailDrawerOpen] = useState(false);
-  const [hasUnreadMail, setHasUnreadMail] = useState(false);
 
   useEffect(() => {
     // Load initial mock mail list from local db if any
@@ -76,7 +68,6 @@ export default function App() {
     // Save locally
     const updatedLogs = [newLog, ...emailLogs];
     setEmailLogs(updatedLogs);
-    setHasUnreadMail(true);
 
     const savedDb = localStorage.getItem('astra_db');
     if (savedDb) {
@@ -108,7 +99,6 @@ export default function App() {
 
   const handleClearEmailLogs = () => {
     setEmailLogs([]);
-    setHasUnreadMail(false);
     const savedDb = localStorage.getItem('astra_db');
     if (savedDb) {
       try {

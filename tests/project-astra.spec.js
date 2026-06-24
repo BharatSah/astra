@@ -23,7 +23,7 @@ test.describe('Project Astra - E2E UI & Flow Suite', () => {
     await expect(page.locator('h1', { hasText: 'Password' })).toBeVisible();
 
     // 2. Test search feature
-    const searchInput = page.locator('input[placeholder="Search platform, username, or URL..."]');
+    const searchInput = page.locator('input[placeholder="Search platform, username..."]');
     await searchInput.fill('Vercel');
     // Vercel Console card should be visible, GitHub should not
     await expect(page.locator('text=Vercel Console')).toBeVisible();
@@ -36,24 +36,25 @@ test.describe('Project Astra - E2E UI & Flow Suite', () => {
     await page.click('button:has-text("Add Password")');
     
     // Check modal header
-    await expect(page.locator('text=Add New Password')).toBeVisible();
+    await expect(page.locator('text=Store Credential')).toBeVisible();
     
     // Fill in values
-    await page.fill('input[placeholder="e.g. Google, AWS, GitHub"]', 'Slack Admin');
-    await page.fill('input[placeholder="e.g. https://github.com"]', 'https://slack.com');
-    await page.fill('input[placeholder="e.g. admin@company.com"]', 'slack-astra-admin');
-    await page.fill('input[placeholder="Secure alphanumeric password"]', 'AstraSlack123!');
+    await page.selectOption('select', 'Slack Workspace');
+    await page.fill('input[placeholder="e.g. john.doe@company.com"]', 'slack-astra-admin');
+    await page.fill('input[placeholder="Enter or generate a password"]', 'AstraSlack123!');
     
     // Submit form
-    await page.click('button:has-text("Store Password")');
+    await page.click('button:has-text("Save Credential")');
     
-    // Check if Slack Admin exists in list now
-    await expect(page.locator('text=Slack Admin')).toBeVisible();
+    // Check if Slack Workspace exists in list now
+    await expect(page.locator('text=Slack Workspace')).toBeVisible();
   });
 
   test('should navigate to System Settings and add a new service', async ({ page }) => {
     // 1. Navigate to System Settings
     await page.click('button:has-text("System Settings")');
+    // Open the Add Service modal
+    await page.click('button:has-text("Add Service")');
     await expect(page.locator('h2', { hasText: 'Add New Service' })).toBeVisible();
 
     // 2. Add a new service
@@ -74,9 +75,9 @@ test.describe('Project Astra - E2E UI & Flow Suite', () => {
     await page.click('button:has-text("Add Customer")');
     
     // Fill in modal details
-    await page.fill('input[placeholder="e.g. Aiden Vance"]', 'John E2E Doe');
-    await page.fill('input[placeholder="e.g. client@domain.com"]', 'john.e2e@example.com');
-    await page.fill('input[placeholder="e.g. +1 555-0199"]', '+977-9800000000');
+    await page.fill('input[placeholder="e.g. Acme Corp"]', 'John E2E Doe');
+    await page.fill('input[placeholder="admin@acme.com"]', 'john.e2e@example.com');
+    await page.fill('input[placeholder="+1 (555) 000-0000"]', '+977-9800000000');
     
     // Service dropdown choice
     await page.selectOption('select', { index: 1 });
@@ -89,10 +90,10 @@ test.describe('Project Astra - E2E UI & Flow Suite', () => {
     
     // Notification threshold
     await page.fill('input[type="number"]', '7');
-    await page.fill('textarea[placeholder="Enter subscription rules, domain provider details or other remarks..."]', 'Test customer note');
+    await page.fill('textarea[placeholder="Any extra details about this client or contract..."]', 'Test customer note');
     
     // Click submit
-    await page.click('button:has-text("Schedule Rule")');
+    await page.click('button:has-text("Save Customer")');
     
     // Verify customer is in the list
     await expect(page.locator('text=John E2E Doe')).toBeVisible();
@@ -101,14 +102,14 @@ test.describe('Project Astra - E2E UI & Flow Suite', () => {
   test('should navigate to Billing Reminders and add a new payment reminder', async ({ page }) => {
     // 1. Navigate to Billing Reminders
     await page.click('button:has-text("Billing Reminders")');
-    await expect(page.locator('h1', { hasText: 'Payment' })).toBeVisible();
+    await expect(page.locator('h1', { hasText: 'Billing Reminders' })).toBeVisible();
 
     // 2. Add payment reminder
     await page.click('button:has-text("Add Reminder")');
     
     // Fill in modal details
-    await page.fill('input[placeholder="e.g. Aiden Vance"]', 'Jane E2E Doe');
-    await page.selectOption('select', { index: 1 });
+    await page.fill('input[placeholder="e.g. Acme Corp"]', 'Jane E2E Doe');
+    await page.locator('select').first().selectOption({ index: 1 });
     
     // Due date (set to 4 days in future)
     const futureDate = new Date();
@@ -117,11 +118,11 @@ test.describe('Project Astra - E2E UI & Flow Suite', () => {
     await page.fill('input[type="date"]', dateStr);
     
     // Amount and currency
-    await page.fill('input[placeholder="e.g. 1500.00"]', '750.50');
-    await page.click('button:has-text("USD")');
+    await page.fill('input[placeholder="0.00"]', '750.50');
+    await page.locator('select').nth(1).selectOption('USD');
     
     // Save reminder
-    await page.click('button:has-text("Schedule Reminder")');
+    await page.click('button:has-text("Save Reminder")');
     
     // Verify reminder is in the list
     await expect(page.locator('text=Jane E2E Doe')).toBeVisible();

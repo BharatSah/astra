@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
-import { Plus, Edit2, Trash2, Mail, CheckCircle, X, Calendar, DollarSign, Wallet, Users, Clock } from 'lucide-react';
+import { Plus, Edit2, Trash2, Mail, CheckCircle, X, DollarSign, Clock, Info } from 'lucide-react';
 
 export default function PaymentReminders({ onNotify, onTriggerEmail }) {
   const [reminders, setReminders] = useState([]);
@@ -374,15 +374,29 @@ export default function PaymentReminders({ onNotify, onTriggerEmail }) {
         </div>
       )}
 
+
       {/* Add / Edit Reminder Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fadeIn">
-          <div className="w-full max-w-xl bg-slate-800 border border-slate-700 rounded-xl shadow-2xl flex flex-col max-h-full">
-            
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4 animate-slide-up">
+          <div className="w-full max-w-2xl glass-panel border border-slate-800 rounded-2xl shadow-2xl shadow-brand-500/10 flex flex-col max-h-[90vh]">
+
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-700">
-              <h2 className="text-lg font-bold text-slate-100">{editingId ? 'Edit Reminder' : 'Add Reminder'}</h2>
-              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-200 transition">
+            <div className="flex items-center justify-between gap-4 px-6 py-5 border-b border-slate-800">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-brand-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-brand-500/20">
+                  {editingId ? <Edit2 className="w-5 h-5 text-white" /> : <DollarSign className="w-5 h-5 text-white" />}
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-white">{editingId ? 'Edit Reminder' : 'Add Reminder'}</h2>
+                  <p className="text-xs text-slate-400">
+                    {editingId ? 'Update payment reminder details.' : 'Schedule a new invoice reminder.'}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/60 transition-all duration-200 cursor-pointer"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -390,40 +404,48 @@ export default function PaymentReminders({ onNotify, onTriggerEmail }) {
             {/* Scrollable Body */}
             <div className="p-6 overflow-y-auto">
               {services.length === 0 ? (
-                <div className="py-6 text-center text-sm text-slate-400 space-y-3">
-                  <p>You must create a service in Settings first before adding reminders.</p>
+                <div className="py-12 text-center text-sm text-slate-400 space-y-4">
+                  <div className="h-14 w-14 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center mx-auto text-slate-600">
+                    <Info className="w-7 h-7" />
+                  </div>
+                  <p>You must create a service in Settings first.</p>
                   <button
                     onClick={() => {
                       setIsModalOpen(false);
-                      onNotify('warning', 'Please navigate to Settings > Service Catalog to configure services');
+                      onNotify('warning', 'Navigate to Settings > Service Catalog to configure services');
                     }}
-                    className="px-4 py-2 bg-brand-600 text-white rounded-xl text-xs font-semibold"
+                    className="px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer"
                   >
                     Go to Settings
                   </button>
                 </div>
               ) : (
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <form onSubmit={handleSubmit} className="space-y-5">
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div>
-                      <label className="block text-[11px] font-bold text-slate-300 mb-1.5">Customer Name <span className="text-rose-500">*</span></label>
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
+                        Customer Name <span className="text-rose-500">*</span>
+                      </label>
                       <input
                         type="text"
+                        placeholder="e.g. Acme Corp"
                         value={customerName}
                         onChange={(e) => setCustomerName(e.target.value)}
-                        className="w-full px-4 py-2.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-200 text-sm focus:border-brand-500 focus:outline-none"
+                        className="w-full px-4 py-3 rounded-xl text-slate-200 glass-input text-sm transition-all duration-200 focus:scale-[1.01]"
                         required
                       />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-bold text-slate-300 mb-1.5">Service <span className="text-rose-500">*</span></label>
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
+                        Service <span className="text-rose-500">*</span>
+                      </label>
                       <select
                         value={serviceId}
                         onChange={(e) => setServiceId(e.target.value)}
-                        className="w-full px-4 py-2.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-200 text-sm focus:border-brand-500 focus:outline-none"
+                        className="w-full px-4 py-3 rounded-xl text-slate-200 glass-input text-sm bg-dark-900 cursor-pointer transition-all duration-200 focus:scale-[1.01]"
                         required
                       >
-                        <option value="">Select Service</option>
                         {services.map(s => (
                           <option key={s.id} value={s.id}>{s.name}</option>
                         ))}
@@ -431,84 +453,98 @@ export default function PaymentReminders({ onNotify, onTriggerEmail }) {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div className="col-span-1">
-                      <label className="block text-[11px] font-bold text-slate-300 mb-1.5">To Pay Date <span className="text-rose-500">*</span></label>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                    <div className="md:col-span-2">
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
+                        Due Date <span className="text-rose-500">*</span>
+                      </label>
                       <input
                         type="date"
                         value={toPayDate}
                         onChange={(e) => setToPayDate(e.target.value)}
-                        className="w-full px-4 py-2.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-200 text-sm focus:border-brand-500 focus:outline-none"
+                        className="w-full px-4 py-3 rounded-xl text-slate-200 glass-input text-sm transition-all duration-200 focus:scale-[1.01]"
                         required
                       />
                     </div>
-                    <div className="col-span-2 grid grid-cols-3 gap-4">
-                      <div className="col-span-2">
-                        <label className="block text-[11px] font-bold text-slate-300 mb-1.5">Amount <span className="text-rose-500">*</span></label>
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
+                        Notify Before <span className="text-rose-500">*</span>
+                      </label>
+                      <div className="flex items-center gap-2">
                         <input
                           type="number"
-                          step="0.01"
-                          placeholder="0.00"
-                          value={amount}
-                          onChange={(e) => setAmount(e.target.value)}
-                          className="w-full px-4 py-2.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-200 text-sm focus:border-brand-500 focus:outline-none"
+                          min="1"
+                          max="30"
+                          value={notifyDaysBefore}
+                          onChange={(e) => setNotifyDaysBefore(parseInt(e.target.value) || 3)}
+                          className="w-full px-4 py-3 rounded-xl text-center text-slate-200 glass-input text-sm transition-all duration-200 focus:scale-[1.01]"
                           required
                         />
-                      </div>
-                      <div className="col-span-1">
-                        <label className="block text-[11px] font-bold text-slate-300 mb-1.5">Currency</label>
-                        <select
-                          value={currency}
-                          onChange={(e) => setCurrency(e.target.value)}
-                          className="w-full px-4 py-2.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-200 text-sm focus:border-brand-500 focus:outline-none"
-                        >
-                          <option value="USD">USD ($)</option>
-                          <option value="EUR">EUR (€)</option>
-                          <option value="GBP">GBP (£)</option>
-                          <option value="INR">INR (₹)</option>
-                        </select>
+                        <span className="text-xs text-slate-500 font-semibold">days</span>
                       </div>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-[11px] font-bold text-slate-300 mb-1.5">Status</label>
-                      <select
-                        value={status}
-                        onChange={(e) => setStatus(e.target.value)}
-                        className="w-full px-4 py-2.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-200 text-sm focus:border-brand-500 focus:outline-none"
-                      >
-                        <option value="pending">Pending</option>
-                        <option value="paid">Paid</option>
-                        <option value="overdue">Overdue</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-bold text-slate-300 mb-1.5">Notify Days Before <span className="text-rose-500">*</span></label>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                    <div className="md:col-span-2">
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
+                        Amount <span className="text-rose-500">*</span>
+                      </label>
                       <input
                         type="number"
-                        min="1"
-                        max="30"
-                        value={notifyDaysBefore}
-                        onChange={(e) => setNotifyDaysBefore(parseInt(e.target.value) || 3)}
-                        className="w-full px-4 py-2.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-200 text-sm focus:border-brand-500 focus:outline-none"
+                        step="0.01"
+                        placeholder="0.00"
+                        value={amount}
+                        onChange={(e) => setAmount(e.target.value)}
+                        className="w-full px-4 py-3 rounded-xl text-slate-200 glass-input text-sm transition-all duration-200 focus:scale-[1.01]"
                         required
                       />
                     </div>
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Currency</label>
+                      <select
+                        value={currency}
+                        onChange={(e) => setCurrency(e.target.value)}
+                        className="w-full px-4 py-3 rounded-xl text-slate-200 glass-input text-sm bg-dark-900 cursor-pointer transition-all duration-200 focus:scale-[1.01]"
+                      >
+                        <option value="USD">USD ($)</option>
+                        <option value="NPR">NPR (Rs.)</option>
+                      </select>
+                    </div>
                   </div>
 
-                  <div className="pt-4 flex justify-end gap-3 text-sm">
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Status</label>
+                    <div className="flex flex-wrap gap-2">
+                      {[
+                        { value: 'pending', label: 'Pending', color: 'amber' },
+                        { value: 'paid', label: 'Paid', color: 'emerald' },
+                        { value: 'overdue', label: 'Overdue', color: 'rose' }
+                      ].map((opt) => (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() => setStatus(opt.value)}
+                          className={`px-4 py-2 rounded-xl text-xs font-bold border transition-all duration-200 cursor-pointer ${status === opt.value ? `bg-${opt.color}-500/20 border-${opt.color}-500/40 text-${opt.color}-300` : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700'}`}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="mt-1.5 text-[11px] text-slate-500">Pending/overdue status is recalculated automatically based on the due date.</p>
+                  </div>
+
+                  <div className="pt-2 flex flex-col-reverse sm:flex-row justify-end gap-3 text-sm">
                     <button
                       type="button"
                       onClick={() => setIsModalOpen(false)}
-                      className="px-4 py-2 bg-slate-600 text-slate-100 hover:bg-slate-500 rounded-lg transition duration-150 font-semibold"
+                      className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white border border-slate-800 transition-all duration-200 font-semibold cursor-pointer"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
-                      className="px-6 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-white font-bold transition duration-200"
+                      className="w-full sm:w-auto px-6 py-2.5 bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 rounded-xl text-white font-bold transition-all duration-200 shadow-lg shadow-brand-500/10 shimmer-btn cursor-pointer"
                     >
                       {editingId ? 'Update Reminder' : 'Save Reminder'}
                     </button>
@@ -519,6 +555,7 @@ export default function PaymentReminders({ onNotify, onTriggerEmail }) {
           </div>
         </div>
       )}
+
     </div>
   );
 }

@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
-import { Plus, Trash2, Mail, Server, Shield, RefreshCw, Save, Laptop, Globe, Image, X } from 'lucide-react';
+import { Plus, Trash2, Server, Laptop, Globe, Image, X } from 'lucide-react';
 
-export default function Settings({ onNotify, activeSubTab = 'services', onSubTabChange }) {
+export default function Settings({ onNotify, activeSubTab = 'services' }) {
   
   // Services state
   const [services, setServices] = useState([]);
@@ -25,7 +25,7 @@ export default function Settings({ onNotify, activeSubTab = 'services', onSubTab
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const fetchServices = async () => {
+  async function fetchServices() {
     setLoadingServices(true);
     try {
       const { data, error } = await supabase.from('services').select('*').order('name', { ascending: true });
@@ -37,9 +37,9 @@ export default function Settings({ onNotify, activeSubTab = 'services', onSubTab
     } finally {
       setLoadingServices(false);
     }
-  };
+  }
 
-  const fetchPlatforms = async () => {
+  async function fetchPlatforms() {
     setLoadingPlatforms(true);
     try {
       const { data, error } = await supabase.from('platforms').select('*').order('platform_name', { ascending: true });
@@ -51,7 +51,7 @@ export default function Settings({ onNotify, activeSubTab = 'services', onSubTab
     } finally {
       setLoadingPlatforms(false);
     }
-  };
+  }
 
   const handleAddService = async (e) => {
     e.preventDefault();

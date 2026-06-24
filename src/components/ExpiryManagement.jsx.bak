@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import {
+  Plus,
   Edit2,
   Trash2,
   Mail,
@@ -8,12 +9,14 @@ import {
   Search,
   Info,
   Sliders,
+  Send,
   UserPlus
 } from 'lucide-react';
 
 export default function ExpiryManagement({ onNotify, onTriggerEmail }) {
   const [customers, setCustomers] = useState([]);
   const [services, setServices] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   // Modal form visibility
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -37,7 +40,8 @@ export default function ExpiryManagement({ onNotify, onTriggerEmail }) {
   const [templates, setTemplates] = useState(null);
 
   const fetchData = async () => {
-        try {
+    setLoading(true);
+    try {
       const servicesRes = await supabase.from('services').select('*').order('name', { ascending: true });
       const customersRes = await supabase.from('customers').select('*').order('expiry_date', { ascending: true });
       const settingsRes = await supabase.from('system_settings').select('*');
@@ -80,6 +84,8 @@ export default function ExpiryManagement({ onNotify, onTriggerEmail }) {
     } catch (err) {
       console.error(err);
       onNotify('error', 'Error loading expiry configuration data');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -474,29 +480,15 @@ export default function ExpiryManagement({ onNotify, onTriggerEmail }) {
         </div>
       )}
 
-
       {/* Modal Form Overlay */}
       {isFormOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4 animate-slide-up">
-          <div className="w-full max-w-2xl glass-panel border border-slate-800 rounded-2xl shadow-2xl shadow-brand-500/10 flex flex-col max-h-[90vh]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fadeIn">
+          <div className="w-full max-w-xl bg-slate-800 border border-slate-700 rounded-xl shadow-2xl flex flex-col max-h-full">
 
             {/* Header */}
-            <div className="flex items-center justify-between gap-4 px-6 py-5 border-b border-slate-800">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-brand-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-brand-500/20">
-                  {editingId ? <Edit2 className="w-5 h-5 text-white" /> : <UserPlus className="w-5 h-5 text-white" />}
-                </div>
-                <div>
-                  <h2 className="text-lg font-bold text-white">{editingId ? 'Edit Customer Rule' : 'Add Customer'}</h2>
-                  <p className="text-xs text-slate-400">
-                    {editingId ? 'Update expiry rule details.' : 'Create a new client expiry and notification rule.'}
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={handleCloseForm}
-                className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/60 transition-all duration-200 cursor-pointer"
-              >
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-700">
+              <h2 className="text-lg font-bold text-slate-100">{editingId ? 'Edit Rule' : 'Add Customer'}</h2>
+              <button onClick={handleCloseForm} className="text-slate-400 hover:text-slate-200 transition">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -504,140 +496,117 @@ export default function ExpiryManagement({ onNotify, onTriggerEmail }) {
             {/* Scrollable Body */}
             <div className="p-6 overflow-y-auto">
               {services.length === 0 ? (
-                <div className="py-12 text-center text-sm text-slate-400 space-y-4">
-                  <div className="h-14 w-14 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center mx-auto text-slate-600">
-                    <Info className="w-7 h-7" />
-                  </div>
+                <div className="py-12 text-center text-sm text-slate-500 space-y-3">
+                  <Info className="w-8 h-8 text-slate-600 mx-auto" />
                   <p>You must configure services in System Settings first.</p>
                 </div>
               ) : (
-                <form onSubmit={handleSubmit} className="space-y-5">
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <div>
-                      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
-                        Customer Name <span className="text-rose-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="e.g. Acme Corp"
-                        value={cname}
-                        onChange={(e) => setCname(e.target.value)}
-                        className="w-full px-4 py-3 rounded-xl text-slate-200 glass-input text-sm transition-all duration-200 focus:scale-[1.01]"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
-                        Email <span className="text-rose-500">*</span>
-                      </label>
-                      <input
-                        type="email"
-                        placeholder="admin@acme.com"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="w-full px-4 py-3 rounded-xl text-slate-200 glass-input text-sm transition-all duration-200 focus:scale-[1.01]"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                    <div className="md:col-span-2">
-                      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Phone</label>
-                      <input
-                        type="tel"
-                        placeholder="+1 (555) 000-0000"
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                        className="w-full px-4 py-3 rounded-xl text-slate-200 glass-input text-sm transition-all duration-200 focus:scale-[1.01]"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
-                        Service <span className="text-rose-500">*</span>
-                      </label>
-                      <select
-                        value={serviceId}
-                        onChange={(e) => setServiceId(e.target.value)}
-                        className="w-full px-4 py-3 rounded-xl text-slate-200 glass-input text-sm bg-dark-900 cursor-pointer transition-all duration-200 focus:scale-[1.01]"
-                        required
-                      >
-                        {services.map(s => (
-                          <option key={s.id} value={s.id}>{s.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                    <div className="md:col-span-2">
-                      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
-                        Expiry Date <span className="text-rose-500">*</span>
-                      </label>
-                      <input
-                        type="date"
-                        value={expiryDate}
-                        onChange={(e) => setExpiryDate(e.target.value)}
-                        className="w-full px-4 py-3 rounded-xl text-slate-200 glass-input text-sm transition-all duration-200 focus:scale-[1.01]"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
-                        Notify Before <span className="text-rose-500">*</span>
-                      </label>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="number"
-                          min="1"
-                          max="90"
-                          value={notifyBeforeDays}
-                          onChange={(e) => setNotifyBeforeDays(parseInt(e.target.value) || 7)}
-                          className="w-full px-4 py-3 rounded-xl text-center text-slate-200 glass-input text-sm transition-all duration-200 focus:scale-[1.01]"
-                          required
-                        />
-                        <span className="text-xs text-slate-500 font-semibold">days</span>
-                      </div>
-                    </div>
-                  </div>
+                <form onSubmit={handleSubmit} className="space-y-4">
 
                   <div>
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Send Mail To</label>
+                    <label className="block text-sm font-semibold text-slate-200 mb-1.5">Customer Name<span className="text-rose-500">*</span></label>
                     <input
                       type="text"
-                      placeholder="e.g. admin@company.com, manager@company.com"
-                      value={recipientEmails}
-                      onChange={(e) => setRecipientEmails(e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl text-slate-200 glass-input text-sm transition-all duration-200 focus:scale-[1.01]"
+                      value={cname}
+                      onChange={(e) => setCname(e.target.value)}
+                      className="w-full px-4 py-2.5 rounded-md bg-slate-700 border-none text-slate-200 text-sm focus:ring-1 focus:ring-blue-500 focus:outline-none transition-colors"
+                      required
                     />
-                    <p className="mt-1.5 text-[11px] text-slate-500">Defaults to customer email if blank. Separate multiple emails with commas.</p>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Note</label>
+                    <label className="block text-sm font-semibold text-slate-200 mb-1.5">Service<span className="text-rose-500">*</span></label>
+                    <select
+                      value={serviceId}
+                      onChange={(e) => setServiceId(e.target.value)}
+                      className="w-full px-4 py-2.5 rounded-md bg-slate-700 border-none text-slate-200 text-sm focus:ring-1 focus:ring-blue-500 focus:outline-none transition-colors"
+                      required
+                    >
+                      {services.map(s => (
+                        <option key={s.id} value={s.id}>{s.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-200 mb-1.5">Email<span className="text-rose-500">*</span></label>
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full px-4 py-2.5 rounded-md bg-slate-700 border-none text-slate-200 text-sm focus:ring-1 focus:ring-blue-500 focus:outline-none transition-colors"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-200 mb-1.5">Phone</label>
+                    <input
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      className="w-full px-4 py-2.5 rounded-md bg-slate-700 border-none text-slate-200 text-sm focus:ring-1 focus:ring-blue-500 focus:outline-none transition-colors"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-200 mb-1.5">Expiry Date<span className="text-rose-500">*</span></label>
+                    <input
+                      type="date"
+                      value={expiryDate}
+                      onChange={(e) => setExpiryDate(e.target.value)}
+                      className="w-full px-4 py-2.5 rounded-md bg-slate-700 border-none text-slate-200 text-sm focus:ring-1 focus:ring-blue-500 focus:outline-none transition-colors"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-200 mb-1.5">Notify Before (Days)<span className="text-rose-500">*</span></label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="90"
+                      value={notifyBeforeDays}
+                      onChange={(e) => setNotifyBeforeDays(parseInt(e.target.value) || 7)}
+                      className="w-full px-4 py-2.5 rounded-md bg-slate-700 border-none text-slate-200 text-sm focus:ring-1 focus:ring-blue-500 focus:outline-none transition-colors"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-200 mb-1.5">Send Mail To</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. admin@company.com"
+                      value={recipientEmails}
+                      onChange={(e) => setRecipientEmails(e.target.value)}
+                      className="w-full px-4 py-2.5 rounded-md bg-slate-700 border-none text-slate-200 text-sm focus:ring-1 focus:ring-blue-500 focus:outline-none transition-colors"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-200 mb-1.5">Note</label>
                     <textarea
                       value={note}
                       onChange={(e) => setNote(e.target.value)}
-                      placeholder="Any extra details about this client or contract..."
                       rows="3"
-                      className="w-full px-4 py-3 rounded-xl text-slate-200 glass-input text-sm font-sans leading-relaxed resize-none transition-all duration-200 focus:scale-[1.01]"
+                      className="w-full px-4 py-2 rounded-md bg-slate-700 border-none text-slate-200 text-sm focus:ring-1 focus:ring-blue-500 focus:outline-none transition-colors resize-none"
                     />
                   </div>
 
-                  <div className="pt-2 flex flex-col-reverse sm:flex-row justify-end gap-3 text-sm">
+                  <div className="pt-4 flex justify-end gap-3 text-sm">
                     <button
                       type="button"
                       onClick={handleCloseForm}
-                      className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white border border-slate-800 transition-all duration-200 font-semibold cursor-pointer"
+                      className="px-4 py-2 bg-slate-600 text-slate-100 hover:bg-slate-500 rounded-lg transition duration-150 font-semibold"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
-                      className="w-full sm:w-auto px-6 py-2.5 bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 rounded-xl text-white font-bold transition-all duration-200 shadow-lg shadow-brand-500/10 shimmer-btn cursor-pointer"
+                      className="px-6 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-white font-bold transition duration-200"
                     >
-                      {editingId ? 'Update Customer Rule' : 'Save Customer'}
+                      {editingId ? 'Update Rule' : 'Save'}
                     </button>
                   </div>
                 </form>

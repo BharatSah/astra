@@ -37,12 +37,21 @@ export default function EmailLogs({ emailLogs, onClearLogs }) {
   return (
     <div className="animate-slide-up flex flex-col h-full" style={{ minHeight: 'calc(100vh - 4rem)' }}>
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6 w-full">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-3 text-slate-100">
             Send History <span className="text-slate-400 text-base font-semibold ml-1">({emailLogs.length} total)</span>
           </h1>
         </div>
+        {emailLogs.length > 0 && (
+          <button
+            onClick={onClearLogs}
+            className="flex items-center gap-2 px-4 py-2 bg-rose-600/10 hover:bg-rose-600 text-rose-400 hover:text-white border border-rose-500/20 hover:border-transparent rounded-xl text-xs font-bold transition duration-200 cursor-pointer"
+          >
+            <Trash2 className="w-4 h-4" />
+            Clear Logs
+          </button>
+        )}
       </div>
 
       {/* Top filter bar */}

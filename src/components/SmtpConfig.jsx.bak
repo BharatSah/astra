@@ -1,29 +1,38 @@
-﻿import { useState, useEffect } from 'react';
-import { supabase } from '../supabaseClient.js';
-import {
-  AlertTriangle,
-  Check,
+import { useState, useEffect } from 'react';
+import { supabase } from '../supabaseClient';
+import { 
+  Shield, 
+  Mail, 
+  RefreshCw, 
+  Save, 
+  Server, 
+  FileText, 
+  Terminal, 
+  CheckCircle, 
+  AlertTriangle, 
+  Eye, 
+  EyeOff, 
+  Copy, 
+  Check, 
+  ExternalLink, 
+  Info, 
+  Sparkles, 
   ChevronRight,
-  Copy,
-  Eye,
-  EyeOff,
-  FileText,
-  Info,
-  Mail,
-  RefreshCw,
-  Save,
-  Send,
-  Server,
-  Shield,
-  Sparkles,
-  Terminal
+  User
 } from 'lucide-react';
 
 export default function SmtpConfig({ onNotify }) {
+  // Navigation tabs
   const [activeSubTab, setActiveSubTab] = useState('server');
+  
+  // App Password visibility state
   const [showPassword, setShowPassword] = useState(false);
+  
+  // Copy to clipboard status states
   const [copiedScript, setCopiedScript] = useState(false);
+  const [copiedKey, setCopiedKey] = useState(false);
 
+  // SMTP Settings state
   const [smtp, setSmtp] = useState({
     host: 'smtp.gmail.com',
     port: 587,
@@ -34,6 +43,7 @@ export default function SmtpConfig({ onNotify }) {
     senderEmail: ''
   });
 
+  // Email Templates state
   const [templates, setTemplates] = useState({
     expiry_warning: { subject: '', body: '' },
     expiry_expired: { subject: '', body: '' },
@@ -43,16 +53,23 @@ export default function SmtpConfig({ onNotify }) {
 
   const [savingSmtp, setSavingSmtp] = useState(false);
   const [savingTemplates, setSavingTemplates] = useState(false);
+  
+  // Selected template for live preview editor
   const [selectedTemplateKey, setSelectedTemplateKey] = useState('expiry_warning');
 
+  // Diagnostic Test Connection simulation
   const [testingConnection, setTestingConnection] = useState(false);
   const [testLogs, setTestLogs] = useState([]);
-  const [tabDirection, setTabDirection] = useState('forward');
+
+  useEffect(() => {
+    fetchSystemSettings();
+  }, []);
 
   const fetchSystemSettings = async () => {
     try {
       const { data, error } = await supabase.from('system_settings').select('*');
       if (error) throw error;
+      
       if (data) {
         const smtpData = data.find(item => item.key === 'smtp_config');
         if (smtpData) setSmtp(smtpData.value);
@@ -64,10 +81,6 @@ export default function SmtpConfig({ onNotify }) {
       console.error('Error fetching system settings:', err.message);
     }
   };
-
-  useEffect(() => {
-    fetchSystemSettings();
-  }, []);
 
   const handleSaveSmtp = async (e) => {
     e.preventDefault();
@@ -105,17 +118,18 @@ export default function SmtpConfig({ onNotify }) {
     }
   };
 
+  // Helper: insert token at cursor in textarea
   const handleInsertToken = (fieldKey, token) => {
     const element = document.getElementById(`${selectedTemplateKey}_${fieldKey}`);
     if (!element) return;
     const start = element.selectionStart;
     const end = element.selectionEnd;
     const text = element.value;
-    const before = text.slice(0, start);
-    const after = text.slice(end);
+    const before = text.substring(0, start);
+    const after = text.substring(end, text.length);
     const newVal = before + token + after;
 
-    setTemplates((prev) => ({
+    setTemplates(prev => ({
       ...prev,
       [selectedTemplateKey]: {
         ...prev[selectedTemplateKey],
@@ -126,22 +140,22 @@ export default function SmtpConfig({ onNotify }) {
     setTimeout(() => {
       element.focus();
       element.setSelectionRange(start + token.length, start + token.length);
-    });
+    }, 0);
   };
 
-  const sampleData = {
-    customer_name: 'Alexander Wright',
-    service_name: 'Enterprise Cloud Hosting',
-    expiry_date: '2026-07-15',
-    days: '7',
-    amount: '149.00',
-    currency: 'USD',
-    due_date: '2026-07-05'
-  };
-
+  // Live preview replacement engine
   const getReplacedSubject = () => {
     const tpl = templates[selectedTemplateKey];
     if (!tpl) return '';
+    const sampleData = {
+      customer_name: "Alexander Wright",
+      service_name: "Enterprise Cloud Hosting",
+      expiry_date: "2026-07-15",
+      days: "7",
+      amount: "149.00",
+      currency: "USD",
+      due_date: "2026-07-05"
+    };
     let subject = tpl.subject || '';
     Object.keys(sampleData).forEach(key => {
       subject = subject.replaceAll(`{${key}}`, sampleData[key]);
@@ -152,6 +166,15 @@ export default function SmtpConfig({ onNotify }) {
   const getReplacedBody = () => {
     const tpl = templates[selectedTemplateKey];
     if (!tpl) return '';
+    const sampleData = {
+      customer_name: "Alexander Wright",
+      service_name: "Enterprise Cloud Hosting",
+      expiry_date: "2026-07-15",
+      days: "7",
+      amount: "149.00",
+      currency: "USD",
+      due_date: "2026-07-05"
+    };
     let body = tpl.body || '';
     Object.keys(sampleData).forEach(key => {
       body = body.replaceAll(`{${key}}`, sampleData[key]);
@@ -165,21 +188,22 @@ export default function SmtpConfig({ onNotify }) {
     setTimeout(() => setCopiedScript(false), 2000);
   };
 
+  // SMTP Simulation test locally
   const runLocalSmtpDiagnostic = () => {
     setTestingConnection(true);
     setTestLogs([]);
     const stages = [
-      { text: 'Querying SMTP credentials from system_settings...', delay: 500 },
-      { text: `Connection target: ${smtp.host}:${smtp.port}`, delay: 1200 },
-      { text: 'Authenticating credentials via Google Secure Token Auth...', delay: 2000 },
-      { text: 'Handshake confirmed. Establishing SSL/TLS tunnel...', delay: 2800 },
-      { text: 'SUCCESS: SMTP transporter is verified and ready!', delay: 3500 }
+      { text: "⏳ Querying SMTP credentials from system_settings...", delay: 500 },
+      { text: `✨ Connection target: ${smtp.host}:${smtp.port}`, delay: 1200 },
+      { text: "🔑 Authenticating credentials via Google Secure Token Auth...", delay: 2000 },
+      { text: "🛰 Handshake confirmed. Establishing SSL/TLS tunnel...", delay: 2800 },
+      { text: "✅ SUCCESS: SMTP transporter is verified and ready!", delay: 3500 }
     ];
 
     stages.forEach(stage => {
       setTimeout(() => {
         setTestLogs(prev => [...prev, stage.text]);
-        if (stage.text.includes('SUCCESS')) {
+        if (stage.text.includes("SUCCESS")) {
           setTestingConnection(false);
           onNotify('success', 'Local SMTP configuration validated!');
         }
@@ -187,99 +211,58 @@ export default function SmtpConfig({ onNotify }) {
     });
   };
 
+  // Check setup validation status for visual indicator
   const isSmtpConfigured = smtp.username && smtp.password;
 
-  const tabs = [
-    { id: 'server', label: 'SMTP Server', icon: Server },
-    { id: 'templates', label: 'Mail Templates', icon: FileText },
-    { id: 'diagnostics', label: 'Diagnostics', icon: Terminal }
-  ];
-
-  const handleTabChange = (id) => {
-    const currentIndex = tabs.findIndex(t => t.id === activeSubTab);
-    const newIndex = tabs.findIndex(t => t.id === id);
-    setTabDirection(newIndex > currentIndex ? 'forward' : 'backward');
-    setActiveSubTab(id);
-  };
-
-  const templateMeta = {
-    expiry_warning: {
-      title: 'Service Expiry Warning',
-      description: 'Sent before a service expires.',
-      tokens: [
-        { token: '{customer_name}', label: 'Customer' },
-        { token: '{service_name}', label: 'Service' },
-        { token: '{expiry_date}', label: 'Expiry Date' },
-        { token: '{days}', label: 'Days Left' }
-      ]
-    },
-    expiry_expired: {
-      title: 'Service Expired Alert',
-      description: 'Sent once a service has expired.',
-      tokens: [
-        { token: '{customer_name}', label: 'Customer' },
-        { token: '{service_name}', label: 'Service' },
-        { token: '{expiry_date}', label: 'Expiry Date' }
-      ]
-    },
-    payment_reminder: {
-      title: 'Payment Due Reminder',
-      description: 'Sent when a payment is due.',
-      tokens: [
-        { token: '{customer_name}', label: 'Customer' },
-        { token: '{service_name}', label: 'Service' },
-        { token: '{amount}', label: 'Amount' },
-        { token: '{currency}', label: 'Currency' },
-        { token: '{due_date}', label: 'Due Date' }
-      ]
-    }
-  };
-
-  const currentTemplate = templates[selectedTemplateKey] || {};
-
   return (
-    <div className="animate-slide-up flex flex-col h-full gap-6" style={{ minHeight: 'calc(100vh - 4rem)' }}>
-
-      {/* Header */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 p-6 glass-panel rounded-2xl border border-slate-850 flex flex-col justify-center">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-brand-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-brand-500/20">
-              <Send className="w-5 h-5 text-white" />
-            </div>
-            <h1 className="text-2xl font-bold tracking-tight text-white">Email & SMTP Settings</h1>
-          </div>
-          <p className="text-sm text-slate-400 max-w-2xl">
-            Configure secure mail delivery, define routing policies, and design notification templates that reach the right inbox at the right time.
+    <div className="animate-slide-up flex flex-col h-full space-y-6" style={{ minHeight: 'calc(100vh - 4rem)' }}>
+      
+      {/* Header Panel */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 glass-panel rounded-2xl border border-slate-850">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-3">
+            <Mail className="w-7 h-7 text-brand-400" />
+            Email & SMTP Settings
+          </h1>
+          <p className="text-sm text-slate-400">
+            Set up SMTP authentication endpoints, define routing policies, and customize notification mail layouts.
           </p>
         </div>
-
-        <div className={`p-6 rounded-2xl border transition-all duration-300 flex flex-col justify-center gap-3 ${isSmtpConfigured ? 'bg-emerald-950/20 border-emerald-500/20' : 'bg-amber-950/20 border-amber-500/20'}`}>
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">SMTP Status</span>
-            <span className={`flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full border ${isSmtpConfigured ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10' : 'text-amber-400 border-amber-500/30 bg-amber-500/10'}`}>
-              <span className={`h-1.5 w-1.5 rounded-full ${isSmtpConfigured ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
-              {isSmtpConfigured ? 'Ready to send' : 'Not configured'}
-            </span>
-          </div>
-          <p className="text-xs text-slate-400 leading-relaxed">
-            {isSmtpConfigured
-              ? `Authenticated as ${smtp.username}. Your templates can now be dispatched through ${smtp.host}.`
-              : 'Add your SMTP credentials to enable live email delivery and run diagnostics.'}
-          </p>
+        
+        {/* Connection Ready Badge */}
+        <div className="flex items-center gap-2">
+          {isSmtpConfigured ? (
+            <div className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold badge-active">
+              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              SMTP CONNECTED
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold badge-warning">
+              <span className="h-2 w-2 rounded-full bg-orange-400"></span>
+              CONFIGURATION PENDING
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Tab Bar */}
-      <div className="flex items-center gap-2 p-1 bg-slate-900/60 rounded-xl border border-slate-850 w-fit">
-        {tabs.map((tab) => {
+      {/* Tabs Navigation Bar */}
+      <div className="flex border-b border-slate-850 space-x-1 p-1 bg-slate-900/60 rounded-xl max-w-lg">
+        {[
+          { id: 'server', label: 'SMTP Server', icon: Server },
+          { id: 'templates', label: 'Mail Templates', icon: FileText },
+          { id: 'diagnostics', label: 'CLI & Diagnostics', icon: Terminal }
+        ].map((tab) => {
           const Icon = tab.icon;
-          const selected = activeSubTab === tab.id;
+          const isSelected = activeSubTab === tab.id;
           return (
             <button
               key={tab.id}
-              onClick={() => handleTabChange(tab.id)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 cursor-pointer ${selected ? 'bg-brand-600 text-white shadow-md shadow-brand-500/20' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'}`}
+              onClick={() => setActiveSubTab(tab.id)}
+              className={`flex items-center gap-2.5 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 cursor-pointer w-full justify-center ${
+                isSelected 
+                  ? 'bg-gradient-to-r from-brand-600/35 to-indigo-600/20 text-brand-400 border border-brand-500/20 shadow-md'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
+              }`}
             >
               <Icon className="w-4 h-4" />
               {tab.label}
@@ -288,21 +271,21 @@ export default function SmtpConfig({ onNotify }) {
         })}
       </div>
 
-      {/* Tab Content */}
-      <div
-        key={activeSubTab}
-        className={`flex-1 w-full pb-8 transition-all duration-300 ${tabDirection === 'forward' ? 'animate-slide-up' : 'animate-slide-up'}`}
-      >
-
+      {/* Main Form & Views Workspace */}
+      <div className="flex-1 w-full max-w-6xl pb-8">
+        
+        {/* Tab 1: Server Config */}
         {activeSubTab === 'server' && (
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-            <div className="xl:col-span-2 space-y-6">
-              {/* Connection Card */}
-              <div className="glass-panel p-6 rounded-2xl border border-slate-850 transition-all duration-300 hover:-translate-y-0.5 hover:border-brand-500/20 hover:shadow-lg hover:shadow-brand-500/5">
-                <div className="flex items-center gap-2 border-b border-slate-800 pb-4 mb-5">
-                  <Server className="w-5 h-5 text-brand-400" />
-                  <h2 className="text-lg font-bold text-slate-100">Connection</h2>
-                </div>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            {/* Left side details */}
+            <div className="lg:col-span-2 glass-panel p-6 rounded-2xl border border-slate-850 space-y-6">
+              <div className="flex items-center gap-2 border-b border-slate-800 pb-4">
+                <Shield className="w-5 h-5 text-brand-400" />
+                <h2 className="text-lg font-bold text-slate-100">Transporter Credentials</h2>
+              </div>
+
+              <form onSubmit={handleSaveSmtp} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="md:col-span-2">
                     <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">SMTP Host</label>
@@ -310,7 +293,7 @@ export default function SmtpConfig({ onNotify }) {
                       type="text"
                       value={smtp.host}
                       onChange={(e) => setSmtp({ ...smtp, host: e.target.value })}
-                      className="w-full px-4 py-2.5 rounded-xl text-slate-200 glass-input text-sm transition-all duration-200 focus:scale-[1.01]"
+                      className="w-full px-4 py-2.5 rounded-xl text-slate-200 glass-input text-sm"
                       required
                     />
                   </div>
@@ -320,37 +303,12 @@ export default function SmtpConfig({ onNotify }) {
                       type="number"
                       value={smtp.port}
                       onChange={(e) => setSmtp({ ...smtp, port: parseInt(e.target.value) || 587 })}
-                      className="w-full px-4 py-2.5 rounded-xl text-slate-200 glass-input text-sm transition-all duration-200 focus:scale-[1.01]"
+                      className="w-full px-4 py-2.5 rounded-xl text-slate-200 glass-input text-sm"
                       required
                     />
                   </div>
                 </div>
-                <div className="mt-4">
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Security</label>
-                  <div className="flex flex-wrap gap-2">
-                    {[
-                      { value: false, label: 'TLS (STARTTLS)' },
-                      { value: true, label: 'SSL' }
-                    ].map((opt) => (
-                      <button
-                        key={opt.label}
-                        type="button"
-                        onClick={() => setSmtp({ ...smtp, secure: opt.value })}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all duration-200 cursor-pointer ${smtp.secure === opt.value ? 'bg-brand-600/20 border-brand-500/40 text-brand-300' : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700'}`}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
 
-              {/* Authentication Card */}
-              <form onSubmit={handleSaveSmtp} className="glass-panel p-6 rounded-2xl border border-slate-850 space-y-5 transition-all duration-300 hover:-translate-y-0.5 hover:border-brand-500/20 hover:shadow-lg hover:shadow-brand-500/5">
-                <div className="flex items-center gap-2 border-b border-slate-800 pb-4">
-                  <Shield className="w-5 h-5 text-brand-400" />
-                  <h2 className="text-lg font-bold text-slate-100">Authentication</h2>
-                </div>
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Username (Email Address)</label>
                   <input
@@ -358,10 +316,11 @@ export default function SmtpConfig({ onNotify }) {
                     placeholder="example@gmail.com"
                     value={smtp.username}
                     onChange={(e) => setSmtp({ ...smtp, username: e.target.value })}
-                    className="w-full px-4 py-2.5 rounded-xl text-slate-200 glass-input text-sm transition-all duration-200 focus:scale-[1.01]"
+                    className="w-full px-4 py-2.5 rounded-xl text-slate-200 glass-input text-sm"
                     required
                   />
                 </div>
+
                 <div>
                   <div className="flex justify-between items-center mb-1.5">
                     <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">App Password</label>
@@ -372,31 +331,31 @@ export default function SmtpConfig({ onNotify }) {
                   </div>
                   <div className="relative">
                     <input
-                      type={showPassword ? 'text' : 'password'}
+                      type={showPassword ? "text" : "password"}
                       placeholder="xxxx xxxx xxxx xxxx"
                       value={smtp.password}
                       onChange={(e) => setSmtp({ ...smtp, password: e.target.value })}
-                      className="w-full pl-4 pr-11 py-2.5 rounded-xl text-slate-200 glass-input text-sm font-mono tracking-wider transition-all duration-200 focus:scale-[1.01]"
+                      className="w-full pl-4 pr-11 py-2.5 rounded-xl text-slate-200 glass-input text-sm font-mono tracking-wider"
                       required
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition cursor-pointer"
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white cursor-pointer"
                     >
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-slate-800/80 pt-4">
                   <div>
                     <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Sender Display Name</label>
                     <input
                       type="text"
                       value={smtp.senderName}
                       onChange={(e) => setSmtp({ ...smtp, senderName: e.target.value })}
-                      className="w-full px-4 py-2.5 rounded-xl text-slate-200 glass-input text-sm transition-all duration-200 focus:scale-[1.01]"
+                      className="w-full px-4 py-2.5 rounded-xl text-slate-200 glass-input text-sm"
                       required
                     />
                   </div>
@@ -407,12 +366,12 @@ export default function SmtpConfig({ onNotify }) {
                       placeholder="reply@domain.com"
                       value={smtp.senderEmail || smtp.username}
                       onChange={(e) => setSmtp({ ...smtp, senderEmail: e.target.value })}
-                      className="w-full px-4 py-2.5 rounded-xl text-slate-200 glass-input text-sm transition-all duration-200 focus:scale-[1.01]"
+                      className="w-full px-4 py-2.5 rounded-xl text-slate-200 glass-input text-sm"
                     />
                   </div>
                 </div>
 
-                <div className="pt-2">
+                <div className="pt-4">
                   <button
                     type="submit"
                     disabled={savingSmtp}
@@ -425,84 +384,77 @@ export default function SmtpConfig({ onNotify }) {
               </form>
             </div>
 
-            {/* Setup Guide */}
-            <div className="glass-panel p-6 rounded-2xl border border-slate-850 h-fit transition-all duration-300 hover:-translate-y-0.5 hover:border-brand-500/20 hover:shadow-lg hover:shadow-brand-500/5">
-              <h3 className="text-md font-bold text-slate-200 flex items-center gap-2 mb-5">
+            {/* Right side guides */}
+            <div className="glass-panel p-6 rounded-2xl border border-slate-850 space-y-5">
+              <h3 className="text-md font-bold text-slate-200 flex items-center gap-2">
                 <Info className="w-4 h-4 text-brand-400" />
                 Gmail SMTP Setup Guide
               </h3>
-
-              <div className="space-y-5">
-                {[
-                  {
-                    step: '1',
-                    title: 'Enable 2-Step Verification',
-                    body: 'Ensure Multi-Factor authentication is active on your target Google account.'
-                  },
-                  {
-                    step: '2',
-                    title: 'Generate App Password',
-                    body: 'Open Google Account > Security, search "App passwords", create a custom label, and copy the 16-character code.'
-                  },
-                  {
-                    step: '3',
-                    title: 'Paste & Save Details',
-                    body: 'Enter the code above, set your sender name, and save the configuration.'
-                  }
-                ].map((item, idx, arr) => (
-                  <div key={item.step} className="relative pl-7">
-                    {idx !== arr.length - 1 && (
-                      <span className="absolute left-[13px] top-6 bottom-[-22px] w-px bg-slate-800" />
-                    )}
-                    <span className="absolute left-0 top-0 flex h-6 w-6 items-center justify-center rounded-full bg-brand-500/20 text-brand-400 text-[10px] font-bold border border-brand-500/20">
-                      {item.step}
-                    </span>
-                    <h4 className="text-xs font-bold text-slate-300">{item.title}</h4>
-                    <p className="mt-1 text-xs text-slate-400 leading-relaxed">{item.body}</p>
+              
+              <div className="space-y-4 text-xs text-slate-400 leading-relaxed">
+                <p>
+                  To secure reliability, we strongly recommend deploying a designated Google App Password rather than your standard accounts login credential.
+                </p>
+                
+                <div className="p-3 bg-slate-900/60 rounded-xl border border-slate-800 space-y-2">
+                  <div className="flex items-center gap-1.5 font-bold text-slate-300">
+                    <span className="flex items-center justify-center h-4.5 w-4.5 rounded-full bg-brand-500/20 text-brand-400 text-[10px]">1</span>
+                    Enable 2-Step Verification
                   </div>
-                ))}
+                  <p className="pl-6">Ensure Multi-Factor authentication is active on your target Google account settings.</p>
+                </div>
+
+                <div className="p-3 bg-slate-900/60 rounded-xl border border-slate-800 space-y-2">
+                  <div className="flex items-center gap-1.5 font-bold text-slate-300">
+                    <span className="flex items-center justify-center h-4.5 w-4.5 rounded-full bg-brand-500/20 text-brand-400 text-[10px]">2</span>
+                    Generate App Password
+                  </div>
+                  <p className="pl-6">Visit your Google Account &gt; Security portal, search for "App passwords", create a custom label, and copy the 16-character code.</p>
+                </div>
+
+                <div className="p-3 bg-slate-900/60 rounded-xl border border-slate-800 space-y-2">
+                  <div className="flex items-center gap-1.5 font-bold text-slate-300">
+                    <span className="flex items-center justify-center h-4.5 w-4.5 rounded-full bg-brand-500/20 text-brand-400 text-[10px]">3</span>
+                    Paste & Save Details
+                  </div>
+                  <p className="pl-6">Input the code above, update your display names, and confirm settings.</p>
+                </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* Templates Tab */}
+        {/* Tab 2: Mail Templates */}
         {activeSubTab === 'templates' && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-
-            {/* Template selector */}
-            <div className="lg:col-span-3 space-y-3">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 px-1">Select Template</h3>
-              {Object.entries(templateMeta).map(([key, meta]) => {
-                const selected = selectedTemplateKey === key;
-                return (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => setSelectedTemplateKey(key)}
-                    className={`w-full text-left p-4 rounded-xl border transition-all duration-200 cursor-pointer group ${selected ? 'bg-brand-600/15 border-brand-500/30 shadow-md shadow-brand-500/10' : 'bg-slate-900/40 border-slate-800 hover:border-slate-700 hover:bg-slate-800/40'}`}
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <span className={`text-sm font-bold ${selected ? 'text-brand-300' : 'text-slate-200 group-hover:text-white'}`}>{meta.title}</span>
-                      {selected && <ChevronRight className="w-4 h-4 text-brand-400" />}
-                    </div>
-                    <p className="text-[11px] text-slate-400 leading-snug">{meta.description}</p>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Editor */}
-            <div className="lg:col-span-5 glass-panel p-6 rounded-2xl border border-slate-850 space-y-5 transition-all duration-300 hover:-translate-y-0.5 hover:border-brand-500/20 hover:shadow-lg hover:shadow-brand-500/5">
-              <div className="flex items-center gap-2 border-b border-slate-800 pb-4">
-                <Mail className="w-5 h-5 text-brand-400" />
-                <h2 className="text-lg font-bold text-slate-100">Template Editor</h2>
+            
+            {/* Editor column */}
+            <div className="lg:col-span-7 glass-panel p-6 rounded-2xl border border-slate-850 space-y-6">
+              
+              {/* Select template picker */}
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+                <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2">
+                  <Mail className="w-5 h-5 text-brand-400" />
+                  Template Builder
+                </h2>
+                
+                <select
+                  value={selectedTemplateKey}
+                  onChange={(e) => setSelectedTemplateKey(e.target.value)}
+                  className="px-3.5 py-1.5 rounded-xl text-slate-200 glass-input text-xs font-semibold bg-dark-900 cursor-pointer"
+                >
+                  <option value="expiry_warning">Service Expiry Warning</option>
+                  <option value="expiry_expired">Service Expired Alert</option>
+                  <option value="payment_reminder">Payment Due Reminder</option>
+                </select>
               </div>
 
-              <form onSubmit={handleSaveTemplates} className="space-y-5">
+              <form onSubmit={handleSaveTemplates} className="space-y-4">
+                
+                {/* Global and Routing targets */}
                 <div className="p-4 bg-slate-900/40 rounded-xl border border-slate-800 space-y-4">
                   <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Global Routing Policies</h3>
-
+                  
                   <div>
                     <label className="block text-xs text-slate-400 mb-1">Global Admin Recipient Address</label>
                     <input
@@ -513,7 +465,7 @@ export default function SmtpConfig({ onNotify }) {
                         ...templates,
                         email_recipient: { ...templates.email_recipient, to_email: e.target.value }
                       })}
-                      className="w-full px-4 py-2.5 rounded-xl text-slate-200 glass-input text-xs transition-all duration-200 focus:scale-[1.01]"
+                      className="w-full px-4 py-2.5 rounded-xl text-slate-200 glass-input text-xs"
                       required
                     />
                   </div>
@@ -527,13 +479,13 @@ export default function SmtpConfig({ onNotify }) {
                           ...templates,
                           email_recipient: { ...templates.email_recipient, warning_recipient_type: e.target.value }
                         })}
-                        className="w-full px-3.5 py-2.5 rounded-xl text-slate-200 glass-input text-xs bg-dark-900 cursor-pointer transition-all duration-200 focus:scale-[1.01]"
+                        className="w-full px-3.5 py-2.5 rounded-xl text-slate-200 glass-input text-xs bg-dark-900 cursor-pointer"
                       >
                         <option value="admin">Global Admin Address</option>
                         <option value="customer">Customer Email Directly</option>
                       </select>
                     </div>
-
+                    
                     <div>
                       <label className="block text-xs text-slate-400 mb-1">Expiry Alerts Sent To</label>
                       <select
@@ -542,7 +494,7 @@ export default function SmtpConfig({ onNotify }) {
                           ...templates,
                           email_recipient: { ...templates.email_recipient, expired_recipient_type: e.target.value }
                         })}
-                        className="w-full px-3.5 py-2.5 rounded-xl text-slate-200 glass-input text-xs bg-dark-900 cursor-pointer transition-all duration-200 focus:scale-[1.01]"
+                        className="w-full px-3.5 py-2.5 rounded-xl text-slate-200 glass-input text-xs bg-dark-900 cursor-pointer"
                       >
                         <option value="admin">Global Admin Address</option>
                         <option value="customer">Customer Email Directly</option>
@@ -551,48 +503,58 @@ export default function SmtpConfig({ onNotify }) {
                   </div>
                 </div>
 
+                {/* Edit Subject */}
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Email Subject</label>
                   <input
                     type="text"
                     id={`${selectedTemplateKey}_subject`}
                     placeholder="Enter email subject template"
-                    value={currentTemplate.subject || ''}
+                    value={templates[selectedTemplateKey]?.subject || ''}
                     onChange={(e) => setTemplates({
                       ...templates,
-                      [selectedTemplateKey]: { ...currentTemplate, subject: e.target.value }
+                      [selectedTemplateKey]: { ...templates[selectedTemplateKey], subject: e.target.value }
                     })}
-                    className="w-full px-4 py-2.5 rounded-xl text-slate-200 glass-input text-sm transition-all duration-200 focus:scale-[1.01]"
+                    className="w-full px-4 py-2.5 rounded-xl text-slate-200 glass-input text-sm"
                     required
                   />
                 </div>
 
+                {/* Edit Body */}
                 <div>
                   <div className="flex justify-between items-center mb-1.5">
                     <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">Email Body Message</label>
-                    <span className="text-[10px] text-slate-500">Insert tokens from the toolbar</span>
+                    <span className="text-[10px] text-slate-500">Insert custom tokens from the toolbar below</span>
                   </div>
+                  
                   <textarea
                     id={`${selectedTemplateKey}_body`}
                     placeholder="Compose mail message content"
-                    value={currentTemplate.body || ''}
+                    value={templates[selectedTemplateKey]?.body || ''}
                     onChange={(e) => setTemplates({
                       ...templates,
-                      [selectedTemplateKey]: { ...currentTemplate, body: e.target.value }
+                      [selectedTemplateKey]: { ...templates[selectedTemplateKey], body: e.target.value }
                     })}
                     rows="7"
-                    className="w-full px-4 py-3 rounded-xl text-slate-200 glass-input text-sm font-sans leading-relaxed resize-none transition-all duration-200 focus:scale-[1.01]"
+                    className="w-full px-4 py-3 rounded-xl text-slate-200 glass-input text-sm font-sans leading-relaxed resize-none"
                     required
                   />
 
+                  {/* Token Insert Toolbar */}
                   <div className="mt-2 p-2 bg-slate-900/60 rounded-xl border border-slate-850 flex flex-wrap gap-1.5 items-center">
                     <span className="text-[10px] font-bold text-slate-500 uppercase px-1.5">Insert:</span>
-                    {templateMeta[selectedTemplateKey].tokens.map((item) => (
+                    {[
+                      { token: '{customer_name}', label: 'Customer' },
+                      { token: '{service_name}', label: 'Service' },
+                      { token: '{expiry_date}', label: 'Expiry Date' },
+                      ...(selectedTemplateKey === 'expiry_warning' ? [{ token: '{days}', label: 'Days Remain' }] : []),
+                      ...(selectedTemplateKey === 'payment_reminder' ? [{ token: '{amount}', label: 'Amt' }, { token: '{currency}', label: 'Curr' }, { token: '{due_date}', label: 'Due Date' }] : [])
+                    ].map((item) => (
                       <button
                         key={item.token}
                         type="button"
                         onClick={() => handleInsertToken('body', item.token)}
-                        className="px-2 py-1 bg-slate-800 hover:bg-brand-600 hover:text-white text-brand-300 text-[10px] font-semibold rounded-md border border-slate-700 hover:border-brand-500 transition-all duration-200 cursor-pointer"
+                        className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-brand-300 hover:text-white text-[10px] font-semibold rounded-md border border-slate-750 transition cursor-pointer"
                       >
                         {item.label}
                       </button>
@@ -600,36 +562,42 @@ export default function SmtpConfig({ onNotify }) {
                   </div>
                 </div>
 
-                <button
-                  type="submit"
-                  disabled={savingTemplates}
-                  className="w-full py-3 bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 rounded-xl text-white font-semibold text-sm transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 shadow-lg shadow-brand-500/10 shimmer-btn"
-                >
-                  {savingTemplates ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                  Save Email Templates
-                </button>
+                <div className="pt-2">
+                  <button
+                    type="submit"
+                    disabled={savingTemplates}
+                    className="w-full py-3 bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 rounded-xl text-white font-semibold text-sm transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 shadow-lg shadow-brand-500/10 shimmer-btn"
+                  >
+                    {savingTemplates ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                    Save Email Templates
+                  </button>
+                </div>
               </form>
             </div>
 
-            {/* Live Preview */}
-            <div className="lg:col-span-4 space-y-3">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 px-1 flex items-center gap-1.5">
+            {/* Live mockup previewer column */}
+            <div className="lg:col-span-5 space-y-4">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
                 <Sparkles className="w-3.5 h-3.5 text-brand-400" />
-                Live Preview
+                Live Inbox Client Preview
               </h3>
 
-              <div className="rounded-2xl border border-slate-850 overflow-hidden shadow-2xl bg-dark-900 flex flex-col max-h-[540px]">
+              {/* Email App Shell mockup */}
+              <div className="rounded-2xl border border-slate-850 overflow-hidden shadow-2xl bg-dark-900 flex flex-col max-h-[500px]">
+                
+                {/* Mail Header window controls */}
                 <div className="bg-slate-950 px-4 py-3 border-b border-slate-900 flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-rose-500/80" />
-                    <span className="w-2.5 h-2.5 rounded-full bg-amber-500/80" />
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/80" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-rose-500/80"></span>
+                    <span className="w-2.5 h-2.5 rounded-full bg-amber-500/80"></span>
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/80"></span>
                   </div>
                   <span className="text-[10px] text-slate-500 font-mono tracking-wide">astra-mail-client v1.2</span>
-                  <div className="w-8" />
+                  <div className="w-8"></div>
                 </div>
 
-                <div className="bg-slate-900/60 p-4 border-b border-slate-850 space-y-3">
+                {/* Sender/Recipient metadata bar */}
+                <div className="bg-slate-900/60 p-4 border-b border-slate-850 space-y-2">
                   <div className="flex items-center gap-3">
                     <div className="h-9 w-9 rounded-full bg-brand-600/30 text-brand-400 font-black text-xs flex items-center justify-center border border-brand-500/20">
                       {smtp.senderName ? smtp.senderName.substring(0, 2).toUpperCase() : 'AN'}
@@ -648,16 +616,17 @@ export default function SmtpConfig({ onNotify }) {
                   <div className="text-[10px] text-slate-400 flex items-center gap-1 bg-slate-950/40 p-1.5 rounded-lg border border-slate-850">
                     <span className="text-slate-500 font-bold pl-1">To:</span>
                     <span className="truncate text-slate-300 font-semibold">
-                      {selectedTemplateKey === 'payment_reminder'
+                      {selectedTemplateKey === 'payment_reminder' 
                         ? (templates.email_recipient?.to_email || 'admin@yourdomain.com')
-                        : (templates.email_recipient?.warning_recipient_type === 'admin'
-                          ? (templates.email_recipient?.to_email || 'admin@yourdomain.com')
-                          : 'customer@gmail.com')
+                        : (templates.email_recipient?.warning_recipient_type === 'admin' 
+                            ? (templates.email_recipient?.to_email || 'admin@yourdomain.com') 
+                            : 'customer@gmail.com')
                       }
                     </span>
                   </div>
                 </div>
 
+                {/* Email Subject block */}
                 <div className="bg-slate-900 px-4 py-3 border-b border-slate-850">
                   <span className="text-[10px] uppercase font-bold text-brand-400 block tracking-wider mb-0.5">Subject</span>
                   <h4 className="text-sm font-bold text-slate-200">
@@ -665,39 +634,45 @@ export default function SmtpConfig({ onNotify }) {
                   </h4>
                 </div>
 
+                {/* Email body container scrollable */}
                 <div className="flex-1 bg-slate-950 p-6 overflow-y-auto min-h-[180px] text-slate-300 text-xs leading-relaxed space-y-4 font-sans">
                   <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-850 max-w-sm space-y-2">
                     <p dangerouslySetInnerHTML={{ __html: getReplacedBody() || '<span class="text-slate-600 italic">Empty body text</span>' }} />
                   </div>
                 </div>
+
               </div>
             </div>
           </div>
         )}
 
-        {/* Diagnostics Tab */}
+        {/* Tab 3: Diagnostics & CLI */}
         {activeSubTab === 'diagnostics' && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-
-            <div className="lg:col-span-7 glass-panel p-6 rounded-2xl border border-slate-850 space-y-6 transition-all duration-300 hover:-translate-y-0.5 hover:border-brand-500/20 hover:shadow-lg hover:shadow-brand-500/5">
+            
+            {/* Run diagnostics */}
+            <div className="lg:col-span-7 glass-panel p-6 rounded-2xl border border-slate-850 space-y-6">
+              
               <div className="flex items-center justify-between gap-4 border-b border-slate-800 pb-4">
                 <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2">
                   <Terminal className="w-5 h-5 text-brand-400" />
                   CLI Integration Testing
                 </h2>
+                
                 <button
                   onClick={runLocalSmtpDiagnostic}
                   disabled={testingConnection || !isSmtpConfigured}
-                  className="px-3.5 py-1.5 bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold rounded-xl flex items-center gap-1.5 transition cursor-pointer disabled:opacity-40 hover:shadow-lg hover:shadow-brand-500/20"
+                  className="px-3.5 py-1.5 bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold rounded-xl flex items-center gap-1.5 transition cursor-pointer disabled:opacity-40"
                 >
                   {testingConnection ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <PlayIcon />}
                   Test Connection
                 </button>
               </div>
 
+              {/* Code Snippet Card */}
               <div className="space-y-3">
-                <p className="text-xs text-slate-400 leading-relaxed">
-                  Browsers block direct SMTP sockets for security. Run the local CLI script to verify credentials, ports, and TLS handshake end-to-end.
+                <p className="text-xs text-slate-400">
+                  Because web browsers execute in sandboxed environments, real SMTP direct sockets are blocked due to security protocols. Running the CLI verification script locally executes a full secure test:
                 </p>
 
                 <div className="bg-slate-950 rounded-xl p-4 border border-slate-850 space-y-3">
@@ -705,10 +680,10 @@ export default function SmtpConfig({ onNotify }) {
                     <span>CLI Terminal Execution</span>
                     <button
                       onClick={handleCopyScript}
-                      className={`flex items-center gap-1 transition-all duration-200 cursor-pointer ${copiedScript ? 'text-emerald-400' : 'text-slate-400 hover:text-white'}`}
+                      className="flex items-center gap-1 text-slate-400 hover:text-white transition cursor-pointer"
                     >
-                      {copiedScript ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                      {copiedScript ? 'Copied!' : 'Copy Command'}
+                      {copiedScript ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                      {copiedScript ? "Copied" : "Copy Command"}
                     </button>
                   </div>
                   <pre className="text-xs text-brand-300 font-mono bg-black/40 p-3 rounded-lg overflow-x-auto">
@@ -717,6 +692,7 @@ export default function SmtpConfig({ onNotify }) {
                 </div>
               </div>
 
+              {/* Simulated diagnostic logs */}
               {testLogs.length > 0 && (
                 <div className="space-y-2 mt-4">
                   <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Diagnostic Console Logs</span>
@@ -732,32 +708,28 @@ export default function SmtpConfig({ onNotify }) {
               )}
             </div>
 
-            <div className="lg:col-span-5 glass-panel p-6 rounded-2xl border border-slate-850 space-y-5 transition-all duration-300 hover:-translate-y-0.5 hover:border-brand-500/20 hover:shadow-lg hover:shadow-brand-500/5">
+            {/* Checklist */}
+            <div className="lg:col-span-5 glass-panel p-6 rounded-2xl border border-slate-850 space-y-5">
               <h3 className="text-sm font-bold text-slate-200 flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4 text-brand-400" />
                 Troubleshooting & Support
               </h3>
 
-              <div className="space-y-4">
-                {[
-                  {
-                    title: 'Invalid Login Credentials',
-                    body: 'Verify that your Gmail username is complete and that no extra whitespace exists inside your App Password.'
-                  },
-                  {
-                    title: 'Port Blocking Issues',
-                    body: 'Most ISPs restrict outbound port 25. Use TLS port 587 or SSL port 465 for reliable delivery.'
-                  },
-                  {
-                    title: 'Security Sandbox Alerts',
-                    body: 'In sandbox mode, emails become local records instead of real SMTP dispatches.'
-                  }
-                ].map((item) => (
-                  <div key={item.title} className="p-3 bg-slate-900/60 rounded-xl border border-slate-800 space-y-1">
-                    <h4 className="text-xs font-bold text-slate-300">{item.title}</h4>
-                    <p className="text-xs text-slate-400 leading-relaxed">{item.body}</p>
-                  </div>
-                ))}
+              <div className="space-y-4 text-xs text-slate-400 leading-relaxed">
+                <div className="space-y-1.5">
+                  <h4 className="font-bold text-slate-300">Invalid Login Credentials</h4>
+                  <p>Verify that your Gmail Username is input completely and no extra whitespace characters exist inside your App Password.</p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <h4 className="font-bold text-slate-300">Port Blocking Issues</h4>
+                  <p>Most ISPs restrict outgoing connections over port 25. Ensure you use TLS port 587 or SSL port 465.</p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <h4 className="font-bold text-slate-300">Security Sandbox Alerts</h4>
+                  <p>In sandbox modes, emails are simulation records added into your localStorage DB rather than sent through SMTP.</p>
+                </div>
               </div>
             </div>
 
@@ -769,6 +741,7 @@ export default function SmtpConfig({ onNotify }) {
   );
 }
 
+// Extra local visual components
 function PlayIcon() {
   return (
     <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
