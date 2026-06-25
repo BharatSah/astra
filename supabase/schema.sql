@@ -1,4 +1,4 @@
--- Supabase Schema for Project Astra
+-- Supabase Schema for Astra
 -- To run this, copy the SQL below and execute it in your Supabase SQL Editor.
 
 -- Enable UUID extension if not enabled
@@ -123,11 +123,11 @@ INSERT INTO system_settings (key, value) VALUES
 ('email_templates', '{
   "expiry_warning": {
     "subject": "Warning: Your service {service_name} expires in {days} days",
-    "body": "Dear {customer_name},\n\nThis is an automated reminder that your subscription for {service_name} is expiring on {expiry_date}.\n\nPlease renew it to avoid service interruption.\n\nBest regards,\nProject Astra"
+    "body": "Dear {customer_name},\n\nThis is an automated reminder that your subscription for {service_name} is expiring on {expiry_date}.\n\nPlease renew it to avoid service interruption.\n\nBest regards,\nAstra"
   },
   "expiry_expired": {
     "subject": "Critical: Your service {service_name} has expired",
-    "body": "Dear {customer_name},\n\nThis is to inform you that your subscription for {service_name} expired on {expiry_date}.\n\nPlease renew it immediately to avoid deactivation.\n\nBest regards,\nProject Astra"
+    "body": "Dear {customer_name},\n\nThis is to inform you that your subscription for {service_name} expired on {expiry_date}.\n\nPlease renew it immediately to avoid deactivation.\n\nBest regards,\nAstra"
   },
   "email_recipient": {
     "to_email": "",
@@ -136,7 +136,7 @@ INSERT INTO system_settings (key, value) VALUES
   },
   "payment_reminder": {
     "subject": "Reminder: Payment due for {service_name}",
-    "body": "Dear {customer_name},\n\nThis is a friendly reminder that a payment of {amount} {currency} is due on {due_date} for your {service_name} service.\n\nPlease process the payment before the due date.\n\nBest regards,\nProject Astra"
+    "body": "Dear {customer_name},\n\nThis is a friendly reminder that a payment of {amount} {currency} is due on {due_date} for your {service_name} service.\n\nPlease process the payment before the due date.\n\nBest regards,\nAstra"
   }
 }'::jsonb)
 ON CONFLICT (key) DO NOTHING;
@@ -144,3 +144,44 @@ ON CONFLICT (key) DO NOTHING;
 -- Create Indexes for optimization
 CREATE INDEX IF NOT EXISTS idx_customers_expiry ON customers(expiry_date);
 CREATE INDEX IF NOT EXISTS idx_payment_reminders_date ON payment_reminders(to_pay_date);
+
+-- 8. Enable Row-Level Security (RLS) on all tables.
+-- NOTE: Enabling RLS does nothing on its own. The policies below are intentionally
+-- restrictive defaults for a production deployment: only authenticated users may read,
+-- and only authenticated admins may write. Replace `auth.uid()` checks with your own
+-- admin-role logic (e.g. a profiles table / custom claim) as appropriate.
+--
+-- SECURITY WARNING: The previous version of this file granted `TO public USING (true)
+-- WITH CHECK (true)` on every table, including `passwords` and `system_settings`. That
+-- made the entire database world-readable AND world-writable by anyone holding the
+-- anon key (which is shipped in the client bundle). Do NOT restore those open policies.
+
+ALTER TABLE services ENABLE ROW LEVEL SECURITY;
+ALTER TABLE customers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE platforms ENABLE ROW LEVEL SECURITY;
+ALTER TABLE passwords ENABLE ROW LEVEL SECURITY;
+ALTER TABLE payment_reminders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE email_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE system_settings ENABLE ROW LEVEL SECURITY;
+
+-- 9. Admin-only access.
+-- Set an admin user's app_metadata to either {"role":"admin"} or
+-- {"roles":["admin"]}. Do not use user_metadata for authorization; users can
+-- edit it themselves through the Auth API.
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SET search_path = ''
+AS $$
+  SELECT COALESCE((auth.jwt() -> 'app_metadata' ->> 'role') = 'admin', false)
+      OR COALESCE((auth.jwt() -> 'app_metadata' -> 'roles') ? 'admin', false);
+$$;
+
+CREATE POLICY "Admin access on services" ON services FOR ALL TO authenticated USING ((SELECT is_admin())) WITH CHECK ((SELECT is_admin()));
+CREATE POLICY "Admin access on customers" ON customers FOR ALL TO authenticated USING ((SELECT is_admin())) WITH CHECK ((SELECT is_admin()));
+CREATE POLICY "Admin access on platforms" ON platforms FOR ALL TO authenticated USING ((SELECT is_admin())) WITH CHECK ((SELECT is_admin()));
+CREATE POLICY "Admin access on passwords" ON passwords FOR ALL TO authenticated USING ((SELECT is_admin())) WITH CHECK ((SELECT is_admin()));
+CREATE POLICY "Admin access on payment_reminders" ON payment_reminders FOR ALL TO authenticated USING ((SELECT is_admin())) WITH CHECK ((SELECT is_admin()));
+CREATE POLICY "Admin access on email_logs" ON email_logs FOR ALL TO authenticated USING ((SELECT is_admin())) WITH CHECK ((SELECT is_admin()));
+CREATE POLICY "Admin access on system_settings" ON system_settings FOR ALL TO authenticated USING ((SELECT is_admin())) WITH CHECK ((SELECT is_admin()));

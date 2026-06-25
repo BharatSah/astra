@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabaseClient';
-import { Plus, Trash2, Server, Laptop, Globe, Image, X } from 'lucide-react';
+import { uploadToCloudinary, isImageUrl } from '../cloudinary';
+import { Plus, Trash2, Server, Laptop, Globe, Image, X, User, LogOut } from 'lucide-react';
 
-export default function Settings({ onNotify, activeSubTab = 'services' }) {
+export default function Settings({ onNotify, activeSubTab = 'services', currentUser, setCurrentUser, onLogout }) {
   
   // Services state
   const [services, setServices] = useState([]);
@@ -18,6 +19,64 @@ export default function Settings({ onNotify, activeSubTab = 'services' }) {
   const [newPlatformUrl, setNewPlatformUrl] = useState('');
   const [newPlatformLogo, setNewPlatformLogo] = useState('');
   const [isPlatformModalOpen, setIsPlatformModalOpen] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [showUrlInput, setShowUrlInput] = useState(false);
+  const fileInputRef = useRef(null);
+
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+
+  const handleFiles = async (files) => {
+    if (!files || files.length === 0) return;
+    const file = files[0];
+    if (!file.type.startsWith('image/')) {
+      onNotify('error', 'Only image files (PNG, JPG, SVG, etc.) are supported.');
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      onNotify('error', 'File size exceeds 2MB limit.');
+      return;
+    }
+    setIsUploadingLogo(true);
+    try {
+      const url = await uploadToCloudinary(file);
+      setNewPlatformLogo(url);
+      onNotify('success', 'Logo uploaded to Cloudinary successfully');
+    } catch (err) {
+      console.error('Cloudinary upload error:', err.message);
+      onNotify('error', err.message || 'Failed to upload logo.');
+    } finally {
+      setIsUploadingLogo(false);
+    }
+  };
+
+  const [isDraggingProfile, setIsDraggingProfile] = useState(false);
+  const profileFileInputRef = useRef(null);
+
+  const [isUploadingProfile, setIsUploadingProfile] = useState(false);
+
+  const handleProfileImageDrop = async (files) => {
+    if (!files || files.length === 0) return;
+    const file = files[0];
+    if (!file.type.startsWith('image/')) {
+      onNotify('error', 'Only image files (PNG, JPG, etc.) are supported.');
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      onNotify('error', 'File size exceeds 2MB limit.');
+      return;
+    }
+    setIsUploadingProfile(true);
+    try {
+      const url = await uploadToCloudinary(file);
+      setCurrentUser({ avatar: url });
+      onNotify('success', 'Profile image uploaded to Cloudinary successfully');
+    } catch (err) {
+      console.error('Cloudinary upload error:', err.message);
+      onNotify('error', err.message || 'Failed to upload profile image.');
+    } finally {
+      setIsUploadingProfile(false);
+    }
+  };
 
   useEffect(() => {
     fetchServices();
@@ -107,6 +166,8 @@ export default function Settings({ onNotify, activeSubTab = 'services' }) {
       setNewPlatformUrl('');
       setNewPlatformLogo('');
       setIsPlatformModalOpen(false);
+      setShowUrlInput(false);
+      setIsDragging(false);
       fetchPlatforms();
     } catch (err) {
       console.error('Error adding platform:', err.message);
@@ -312,7 +373,7 @@ export default function Settings({ onNotify, activeSubTab = 'services' }) {
                           <a 
                             href={platform.url} 
                             target="_blank" 
-                            rel="noreferrer" 
+                            rel="noopener noreferrer" 
                             className="text-[11px] text-brand-400 hover:underline block truncate mt-0.5"
                           >
                             {platform.url}
@@ -383,19 +444,80 @@ export default function Settings({ onNotify, activeSubTab = 'services' }) {
                       </div>
                     </div>
                     <div>
-                      <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Logo URL</label>
-                      <div className="relative">
-                        <span className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-500">
-                          <Image className="w-4 h-4" />
-                        </span>
-                        <input
-                          type="url"
-                          placeholder="https://cdn.svgporn.com/logos/example.svg"
-                          value={newPlatformLogo}
-                          onChange={(e) => setNewPlatformLogo(e.target.value)}
-                          className="w-full pl-11 pr-4 py-3.5 rounded-xl text-slate-200 glass-input text-sm"
-                        />
+                      <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Platform Logo</label>
+                      
+                      {newPlatformLogo ? (
+                        <div className="flex flex-col items-center justify-center p-4 border border-dashed border-brand-500/50 bg-brand-500/5 rounded-xl relative group min-h-[120px]">
+                          <img 
+                            src={newPlatformLogo} 
+                            alt="Logo Preview" 
+                            className="w-16 h-16 rounded-xl object-contain bg-white/5 p-1.5 border border-white/10 mb-2"
+                          />
+                          <span className="text-xs text-slate-400 truncate max-w-xs px-2">
+                            {newPlatformLogo.startsWith('data:') ? 'Uploaded custom logo' : (isImageUrl(newPlatformLogo) ? 'Cloudinary logo uploaded' : newPlatformLogo)}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setNewPlatformLogo('')}
+                            className="absolute top-2 right-2 p-1.5 bg-slate-800/80 hover:bg-rose-600 text-slate-400 hover:text-white rounded-lg transition"
+                            title="Remove Logo"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <div
+                          onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                          onDragLeave={(e) => { e.preventDefault(); setIsDragging(false); }}
+                          onDrop={(e) => { e.preventDefault(); setIsDragging(false); handleFiles(e.dataTransfer.files); }}
+                          onClick={() => fileInputRef.current?.click()}
+                          className={`flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-xl cursor-pointer transition duration-200 min-h-[120px] ${
+                            isDragging 
+                              ? 'border-brand-500 bg-brand-500/10 text-brand-400' 
+                              : 'border-slate-700/80 hover:border-brand-500/60 bg-slate-800/20 hover:bg-slate-800/40 text-slate-400'
+                          }`}
+                        >
+                          <input 
+                            type="file" 
+                            ref={fileInputRef}
+                            onChange={(e) => handleFiles(e.target.files)}
+                            accept="image/*" 
+                            className="hidden" 
+                          />
+                          <Image className={`w-8 h-8 mb-2 transition-transform duration-200 ${isDragging ? 'scale-110 text-brand-400' : 'text-slate-500'}`} />
+                          <p className="text-xs font-semibold text-center">
+                            {isUploadingLogo ? 'Uploading to Cloudinary...' : (isDragging ? 'Drop logo here!' : 'Drag & drop logo, or click to browse')}
+                          </p>
+                          <p className="text-[10px] text-slate-500 mt-1">Supports PNG, JPG, SVG (Max 2MB)</p>
+                        </div>
+                      )}
+                      
+                      <div className="mt-2 text-right">
+                        <button
+                          type="button"
+                          onClick={() => setShowUrlInput(!showUrlInput)}
+                          className="text-[11px] text-brand-400 hover:underline animate-fade-in"
+                        >
+                          {showUrlInput ? 'Hide URL input' : 'Or paste a logo URL instead'}
+                        </button>
                       </div>
+
+                      {showUrlInput && (
+                        <div className="mt-3 animate-fade-in">
+                          <div className="relative">
+                            <span className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-500">
+                              <Globe className="w-4 h-4" />
+                            </span>
+                            <input
+                              type="url"
+                              placeholder="https://cdn.svgporn.com/logos/example.svg"
+                              value={newPlatformLogo}
+                              onChange={(e) => setNewPlatformLogo(e.target.value)}
+                              className="w-full pl-11 pr-4 py-3.5 rounded-xl text-slate-200 glass-input text-sm"
+                            />
+                          </div>
+                        </div>
+                      )}
                     </div>
                     <div className="pt-4 flex justify-end gap-3 text-sm">
                       <button
@@ -417,6 +539,161 @@ export default function Settings({ onNotify, activeSubTab = 'services' }) {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* User Profile Subpage */}
+      {activeSubTab === 'profile' && (
+        <div className="flex-1 flex flex-col h-full space-y-4 animate-slide-up">
+          <div className="glass-panel p-6 rounded-2xl border border-slate-850 flex-1 flex flex-col" style={{ minHeight: 'calc(100vh - 12rem)' }}>
+            <div className="mb-6">
+              <h2 className="text-xl font-bold flex items-center gap-2">
+                <User className="w-5 h-5 text-brand-400" />
+                User Profile
+              </h2>
+              <p className="text-xs text-slate-400 mt-1">Manage your administrative profile details and security settings.</p>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              {/* Left Column: Avatar & Basic Stats */}
+              <div className="bg-slate-900/40 p-6 rounded-2xl border border-slate-850 flex flex-col items-center text-center justify-center space-y-4">
+                {isImageUrl(currentUser?.avatar) ? (
+                  <img 
+                    src={currentUser.avatar} 
+                    alt={`${currentUser.username}'s avatar`} 
+                    className="h-24 w-24 rounded-full object-cover shadow-xl shadow-brand-500/20 border border-white/10" 
+                  />
+                ) : (
+                  <div className="h-24 w-24 rounded-full bg-gradient-to-tr from-brand-600 to-indigo-600 flex items-center justify-center font-black text-white text-4xl shadow-xl shadow-brand-500/20">
+                    {currentUser?.avatar || 'B'}
+                  </div>
+                )}
+                <div>
+                  <h3 className="text-lg font-bold text-slate-200">{currentUser?.username}</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">{currentUser?.role || 'Administrator'}</p>
+                </div>
+                <div className="pt-2 w-full">
+                  <button
+                    onClick={onLogout}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-rose-600/10 hover:bg-rose-600 text-rose-400 hover:text-white border border-rose-500/20 hover:border-transparent rounded-xl text-xs font-bold transition duration-200 cursor-pointer"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Sign Out Account
+                  </button>
+                </div>
+              </div>
+
+              {/* Right Column: Editing Form */}
+              <div className="lg:col-span-2 space-y-6">
+                <div className="bg-slate-900/20 p-6 rounded-2xl border border-slate-850/80 space-y-5">
+                  <h3 className="font-bold text-slate-200 text-sm">Account Particulars</h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Username / Handle</label>
+                      <input
+                        type="text"
+                        defaultValue={currentUser?.username}
+                        onBlur={(e) => setCurrentUser({ username: e.target.value })}
+                        placeholder="e.g. bharat.shah"
+                        className="w-full px-4 py-3 rounded-xl text-slate-200 glass-input text-sm focus:scale-[1.01]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Email Address</label>
+                      <input
+                        type="email"
+                        defaultValue={currentUser?.email}
+                        onBlur={(e) => setCurrentUser({ email: e.target.value, avatar: e.target.value.split('@')[0].charAt(0).toUpperCase() })}
+                        placeholder="e.g. bharat@mithilacoders.com"
+                        className="w-full px-4 py-3 rounded-xl text-slate-200 glass-input text-sm focus:scale-[1.01]"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Designation / Role</label>
+                      <input
+                        type="text"
+                        defaultValue={currentUser?.role || 'Administrator'}
+                        onBlur={(e) => setCurrentUser({ role: e.target.value })}
+                        placeholder="e.g. Cloud Lead"
+                        className="w-full px-4 py-3 rounded-xl text-slate-200 glass-input text-sm focus:scale-[1.01]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Avatar Initial</label>
+                      <input
+                        type="text"
+                        maxLength="1"
+                        defaultValue={!isImageUrl(currentUser?.avatar) ? (currentUser?.avatar || 'B') : 'B'}
+                        onBlur={(e) => setCurrentUser({ avatar: e.target.value.toUpperCase() })}
+                        placeholder="B"
+                        className="w-full px-4 py-3 rounded-xl text-slate-200 glass-input text-sm font-bold text-center focus:scale-[1.01]"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Profile Image (Drag & Drop)</label>
+                    {isImageUrl(currentUser?.avatar) ? (
+                      <div className="flex flex-col items-center justify-center p-4 border border-dashed border-brand-500/50 bg-brand-500/5 rounded-xl relative min-h-[120px]">
+                        <img 
+                          src={currentUser.avatar} 
+                          alt="Profile Preview" 
+                          className="w-16 h-16 rounded-full object-cover shadow-md shadow-brand-500/20 mb-2 border border-white/10"
+                        />
+                        <span className="text-xs text-slate-400">Custom profile image active</span>
+                        <button
+                          type="button"
+                          onClick={() => setCurrentUser({ avatar: (currentUser.username ? currentUser.username.charAt(0).toUpperCase() : 'B') })}
+                          className="absolute top-2 right-2 p-1.5 bg-slate-800/80 hover:bg-rose-600 text-slate-400 hover:text-white rounded-lg transition"
+                          title="Remove Image"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div
+                        onDragOver={(e) => { e.preventDefault(); setIsDraggingProfile(true); }}
+                        onDragLeave={(e) => { e.preventDefault(); setIsDraggingProfile(false); }}
+                        onDrop={(e) => { e.preventDefault(); setIsDraggingProfile(false); handleProfileImageDrop(e.dataTransfer.files); }}
+                        onClick={() => profileFileInputRef.current?.click()}
+                        className={`flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-xl cursor-pointer transition duration-200 min-h-[120px] ${
+                          isDraggingProfile 
+                            ? 'border-brand-500 bg-brand-500/10 text-brand-400' 
+                            : 'border-slate-700/80 hover:border-brand-500/60 bg-slate-800/20 hover:bg-slate-800/40 text-slate-400'
+                        }`}
+                      >
+                        <input 
+                          type="file" 
+                          ref={profileFileInputRef}
+                          onChange={(e) => handleProfileImageDrop(e.target.files)}
+                          accept="image/*" 
+                          className="hidden" 
+                        />
+                        <Image className={`w-8 h-8 mb-2 transition-transform duration-200 ${isDraggingProfile ? 'scale-110 text-brand-400' : 'text-slate-500'}`} />
+                        <p className="text-xs font-semibold text-center">
+                          {isUploadingProfile ? 'Uploading to Cloudinary...' : (isDraggingProfile ? 'Drop profile image here!' : 'Drag & drop image, or click to browse')}
+                        </p>
+                        <p className="text-[10px] text-slate-500 mt-1">Supports PNG, JPG (Max 2MB)</p>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="pt-2 flex justify-end">
+                    <button
+                      onClick={() => onNotify('success', 'Profile details updated and stored!')}
+                      className="px-6 py-2.5 bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 rounded-xl text-white font-bold text-xs shadow-lg shadow-brand-500/10 transition duration-200"
+                    >
+                      Save Account Details
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

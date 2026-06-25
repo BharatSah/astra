@@ -60,7 +60,7 @@ export default function ExpiryManagement({ onNotify, onTriggerEmail }) {
         else if (daysLeft <= cust.notify_before_days) currentStatus = 'warning';
 
         // Auto-send expired emails on load
-        if (daysLeft <= 0 && cust.recipient_emails) {
+        if (daysLeft <= 0 && (cust.recipient_emails || cust.email)) {
           const sentKey = `expiry_sent_${cust.id}_${today.toISOString().split('T')[0]}`;
           if (!localStorage.getItem(sentKey)) {
             localStorage.setItem(sentKey, 'true');
@@ -99,7 +99,7 @@ export default function ExpiryManagement({ onNotify, onTriggerEmail }) {
     const daysLeft = Math.ceil((expiry.getTime() - today.getTime()) / (1000 * 3600 * 24));
 
     let subject = tpl?.expiry_expired?.subject || 'Critical: Your service {service_name} has expired';
-    let body = tpl?.expiry_expired?.body || 'Dear {customer_name},\n\nYour service {service_name} expired on {expiry_date}.\n\nPlease renew immediately.\n\nBest regards,\nProject Astra';
+    let body = tpl?.expiry_expired?.body || 'Dear {customer_name},\n\nYour service {service_name} expired on {expiry_date}.\n\nPlease renew immediately.\n\nBest regards,\nAstra';
 
     subject = subject
       .replace(/{customer_name}/g, customer.cname)
@@ -113,7 +113,9 @@ export default function ExpiryManagement({ onNotify, onTriggerEmail }) {
       .replace(/{days}/g, Math.abs(daysLeft))
       .replace(/{expiry_date}/g, customer.expiry_date);
 
-    const recipients = customer.recipient_emails.split(',').map(e => e.trim()).filter(Boolean);
+    const recipients = customer.recipient_emails
+      ? customer.recipient_emails.split(',').map(e => e.trim()).filter(Boolean)
+      : [customer.email];
     recipients.forEach(recipient => {
       onTriggerEmail({
         recipient,
@@ -198,6 +200,7 @@ export default function ExpiryManagement({ onNotify, onTriggerEmail }) {
       note,
       notify_before_days: parseInt(notifyBeforeDays) || 7,
       expiry_date: expiryDate,
+      recipient_emails: recipientEmails ? recipientEmails.trim() : '',
       status
     };
 
@@ -359,7 +362,7 @@ export default function ExpiryManagement({ onNotify, onTriggerEmail }) {
       ) : (
         <div className="glass-panel rounded-2xl border border-slate-850 overflow-hidden flex-1 flex flex-col">
           <div className="overflow-x-auto flex-1">
-            <table className="w-full text-left border-collapse text-sm h-full">
+            <table className="w-full text-left border-collapse text-sm">
               <thead>
                 <tr className="bg-slate-900/50 border-b border-slate-800 text-slate-400 font-semibold text-xs">
                   <th className="p-4">Customer</th>

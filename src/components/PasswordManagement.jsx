@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
-import { Search, Plus, Eye, EyeOff, Copy, ExternalLink, Trash2, Edit2, Key, RefreshCw, X, Laptop } from 'lucide-react';
+import { encryptSecret, decryptSecret, isEncrypted } from '../crypto';
+import { Search, Plus, Eye, EyeOff, Copy, ExternalLink, Trash2, Edit2, Key, RefreshCw, X, Laptop, Lock, Shield } from 'lucide-react';
 
 export default function PasswordManagement({ onNotify }) {
   const [passwords, setPasswords] = useState([]);
@@ -17,6 +18,11 @@ export default function PasswordManagement({ onNotify }) {
   
   // Password visibility tracking per entry
   const [visiblePasswords, setVisiblePasswords] = useState({});
+  const [vaultUnlocked, setVaultUnlocked] = useState(false);
+  const [vaultPassphrase, setVaultPassphrase] = useState('');
+  const [unlockInput, setUnlockInput] = useState('');
+  const [unlockError, setUnlockError] = useState('');
+  const [decryptedPasswords, setDecryptedPasswords] = useState({});
 
 
 
@@ -50,6 +56,10 @@ export default function PasswordManagement({ onNotify }) {
   }, []);
 
   const handleOpenAddModal = () => {
+    if (!vaultUnlocked) {
+      onNotify('warning', 'Unlock the vault first to add credentials.');
+      return;
+    }
     setEditingId(null);
     setPlatformName(platforms[0]?.platform_name || '');
     setUsername('');
@@ -57,23 +67,67 @@ export default function PasswordManagement({ onNotify }) {
     setIsModalOpen(true);
   };
 
-  const handleOpenEditModal = (pw) => {
+  const handleOpenEditModal = async (pw) => {
+    if (!vaultUnlocked) {
+      onNotify('warning', 'Unlock the vault first to edit credentials.');
+      return;
+    }
     setEditingId(pw.id);
     setPlatformName(pw.platform_name);
     setUsername(pw.username);
-    setPassword(pw.password);
+    // Pre-fill with decrypted plaintext for editing
+    const plain = await decryptEntry(pw);
+    setPassword(plain);
     setIsModalOpen(true);
   };
 
   const handleGeneratePassword = () => {
+    // Cryptographically secure generator using WebCrypto.
     const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+~`|}{[]:;?><,./-=';
-    let length = 16;
+    const length = 20;
+    const max = Math.floor(0xFFFFFFFF / chars.length) * chars.length; // reject bias
+    const buf = new Uint32Array(1);
     let generated = '';
-    for (let i = 0; i < length; i++) {
-      generated += chars.charAt(Math.floor(Math.random() * chars.length));
+    while (generated.length < length) {
+      crypto.getRandomValues(buf);
+      if (buf[0] < max) {
+        generated += chars.charAt(buf[0] % chars.length);
+      }
     }
     setPassword(generated);
     onNotify('success', 'Generated secure password!');
+  };
+
+  const handleUnlockVault = async (e) => {
+    e?.preventDefault();
+    if (!unlockInput) {
+      setUnlockError('Enter your vault passphrase.');
+      return;
+    }
+    setVaultPassphrase(unlockInput);
+    setVaultUnlocked(true);
+    setUnlockInput('');
+    setUnlockError('');
+  };
+
+  const handleLockVault = () => {
+    setVaultUnlocked(false);
+    setVaultPassphrase('');
+    setDecryptedPasswords({});
+    setVisiblePasswords({});
+  };
+
+  const decryptEntry = async (entry) => {
+    if (!isEncrypted(entry.password)) return entry.password;
+    const cached = decryptedPasswords[entry.id];
+    if (cached !== undefined) return cached;
+    try {
+      const plain = await decryptSecret(entry.password, vaultPassphrase);
+      setDecryptedPasswords(prev => ({ ...prev, [entry.id]: plain }));
+      return plain;
+    } catch {
+      return '• decryption failed •';
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -82,17 +136,33 @@ export default function PasswordManagement({ onNotify }) {
       onNotify('warning', 'Please fill in all required fields');
       return;
     }
+    if (!vaultUnlocked || !vaultPassphrase) {
+      onNotify('warning', 'Unlock the vault before saving credentials.');
+      return;
+    }
+
+    let storedPassword;
+    try {
+      // Encrypt at rest; plaintext never leaves the browser unencrypted.
+      storedPassword = await encryptSecret(password, vaultPassphrase);
+    } catch (err) {
+      console.error(err);
+      onNotify('error', 'Failed to encrypt credential');
+      return;
+    }
 
     const payload = {
       platform_name: platformName,
       username,
-      password
+      password: storedPassword
     };
 
     try {
       if (editingId) {
         const { error } = await supabase.from('passwords').update(payload).eq('id', editingId);
         if (error) throw error;
+        // Update in-memory decrypted cache so the UI reflects the new value
+        setDecryptedPasswords(prev => ({ ...prev, [editingId]: password }));
         onNotify('success', 'Password updated successfully');
       } else {
         const { error } = await supabase.from('passwords').insert(payload);
@@ -120,16 +190,30 @@ export default function PasswordManagement({ onNotify }) {
     }
   };
 
-  const toggleVisibility = (id) => {
+  const toggleVisibility = async (pw) => {
+    const isVisible = visiblePasswords[pw.id];
+    if (!isVisible) {
+      // Decrypt on first reveal; cached thereafter
+      await decryptEntry(pw);
+    }
     setVisiblePasswords(prev => ({
       ...prev,
-      [id]: !prev[id]
+      [pw.id]: !isVisible
     }));
   };
 
-  const handleCopyToClipboard = (text, label) => {
-    navigator.clipboard.writeText(text);
-    onNotify('success', `${label} copied to clipboard!`);
+  const handleCopyToClipboard = async (text, label) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      onNotify('success', `${label} copied to clipboard!`);
+    } catch {
+      onNotify('error', 'Clipboard access denied');
+    }
+  };
+
+  const handleCopyPassword = async (pw) => {
+    const plain = await decryptEntry(pw);
+    await handleCopyToClipboard(plain, 'Password');
   };
 
   // Filter passwords based on search term (also searches mapped platform url)
@@ -145,12 +229,61 @@ export default function PasswordManagement({ onNotify }) {
   return (
     <div className="animate-slide-up flex flex-col" style={{ minHeight: 'calc(100vh - 7rem)' }}>
       {/* Header */}
-      <div className="mb-6">
+      <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold flex items-center gap-3 text-slate-100">
           Password Vault <span className="text-slate-400 text-base font-semibold ml-1">({filteredPasswords.length} total)</span>
         </h1>
+        {vaultUnlocked && (
+          <div className="flex items-center gap-2">
+            <span className="flex items-center gap-1.5 text-xs font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-full">
+              <Shield className="w-3.5 h-3.5" />
+              Vault Unlocked
+            </span>
+            <button
+              onClick={handleLockVault}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold border border-slate-700 transition cursor-pointer"
+              title="Lock vault and clear decrypted secrets from memory"
+            >
+              <Lock className="w-3.5 h-3.5" />
+              Lock
+            </button>
+          </div>
+        )}
       </div>
 
+      {!vaultUnlocked ? (
+        <div className="glass-panel p-10 rounded-2xl border border-slate-850 flex-1 flex flex-col items-center justify-center max-w-md mx-auto w-full text-center">
+          <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-brand-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-brand-500/20 mb-5">
+            <Lock className="w-8 h-8 text-white" />
+          </div>
+          <h2 className="text-lg font-bold text-slate-100 mb-1.5">Vault Locked</h2>
+          <p className="text-xs text-slate-400 mb-6 max-w-xs">
+            Enter your master passphrase to decrypt stored credentials. The passphrase is held only in memory for this session and never transmitted.
+          </p>
+          <form onSubmit={handleUnlockVault} className="w-full space-y-3">
+            <input
+              type="password"
+              placeholder="Master passphrase"
+              value={unlockInput}
+              onChange={(e) => setUnlockInput(e.target.value)}
+              autoFocus
+              className="w-full px-4 py-3 rounded-xl text-slate-200 glass-input text-sm"
+            />
+            {unlockError && <p className="text-xs text-rose-400">{unlockError}</p>}
+            <button
+              type="submit"
+              className="w-full py-3 bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 rounded-xl text-white font-bold text-sm transition shadow-lg shadow-brand-500/10 shimmer-btn cursor-pointer flex items-center justify-center gap-2"
+            >
+              <Key className="w-4 h-4" />
+              Unlock Vault
+            </button>
+          </form>
+          <p className="mt-4 text-[10px] text-slate-600 max-w-xs">
+            Credentials are encrypted at rest with AES-GCM. A wrong passphrase will show garbled output when revealing a password.
+          </p>
+        </div>
+      ) : (
+      <>
       {/* Compact Top Bar */}
       <div className="flex flex-col sm:flex-row gap-3 items-center justify-between mb-4">
         <div className="relative w-full sm:w-80">
@@ -207,7 +340,7 @@ export default function PasswordManagement({ onNotify }) {
                         <img 
                           src={plat.logo} 
                           alt={`${pw.platform_name} logo`} 
-                          onError={(e) => { e.target.src = ''; }} // Prevent broken image tags
+                          onError={(e) => { e.currentTarget.style.display = 'none'; }}
                           className="w-10 h-10 rounded-xl object-contain bg-white/5 p-1 border border-white/10 shrink-0" 
                         />
                       ) : (
@@ -223,7 +356,7 @@ export default function PasswordManagement({ onNotify }) {
                           <a
                             href={plat.url.startsWith('http') ? plat.url : `https://${plat.url}`}
                             target="_blank"
-                            rel="noreferrer"
+                            rel="noopener noreferrer"
                             className="text-xs text-brand-400 hover:underline flex items-center gap-1 mt-0.5 truncate"
                           >
                             <span className="truncate">{plat.url.replace(/^https?:\/\//, '')}</span>
@@ -271,18 +404,18 @@ export default function PasswordManagement({ onNotify }) {
                       <span className="text-slate-400 font-medium">Password</span>
                       <div className="flex items-center gap-2">
                         <span className="text-slate-200 font-mono select-all">
-                          {visiblePasswords[pw.id] ? pw.password : '••••••••••••'}
+                          {visiblePasswords[pw.id] ? (decryptedPasswords[pw.id] ?? '************') : '************'}
                         </span>
                         <div className="flex items-center gap-1">
                           <button
-                            onClick={() => toggleVisibility(pw.id)}
+                            onClick={() => toggleVisibility(pw)}
                             className="text-slate-400 hover:text-brand-400 transition"
                             title={visiblePasswords[pw.id] ? "Hide Password" : "Show Password"}
                           >
                             {visiblePasswords[pw.id] ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                           </button>
                           <button
-                            onClick={() => handleCopyToClipboard(pw.password, 'Password')}
+                            onClick={() => handleCopyPassword(pw)}
                             className="text-slate-400 hover:text-brand-400 transition"
                             title="Copy Password"
                           >
@@ -428,7 +561,7 @@ export default function PasswordManagement({ onNotify }) {
                     </div>
                     <p className="mt-1.5 text-[11px] text-slate-500">
                       {password.length >= 16
-                        ? 'Great — this password looks strong.'
+                        ? 'Great - this password looks strong.'
                         : password.length > 0
                         ? 'Tip: use at least 16 characters for better security.'
                         : 'A strong password will be generated automatically if you click above.'}
@@ -455,6 +588,8 @@ export default function PasswordManagement({ onNotify }) {
             </div>
           </div>
         </div>
+      )}
+      </>
       )}
     </div>
   );

@@ -260,7 +260,7 @@ export default function PaymentReminders({ onNotify, onTriggerEmail }) {
       ) : (
         <div className="glass-panel rounded-2xl border border-slate-850 overflow-hidden flex-1 flex flex-col">
           <div className="overflow-x-auto flex-1">
-            <table className="w-full text-left border-collapse text-sm h-full">
+            <table className="w-full text-left border-collapse text-sm">
               <thead>
                 <tr className="bg-slate-900/50 border-b border-slate-800 text-slate-400 font-semibold">
                   <th className="p-4">Customer</th>

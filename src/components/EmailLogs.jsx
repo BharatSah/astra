@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Mail, Trash2, Search, ChevronDown, CheckCircle2, Eye, X } from 'lucide-react';
+import { Mail, Search, ChevronDown, CheckCircle2, Eye, X } from 'lucide-react';
 
-export default function EmailLogs({ emailLogs, onClearLogs }) {
+export default function EmailLogs({ emailLogs }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedLog, setSelectedLog] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
@@ -43,15 +43,6 @@ export default function EmailLogs({ emailLogs, onClearLogs }) {
             Send History <span className="text-slate-400 text-base font-semibold ml-1">({emailLogs.length} total)</span>
           </h1>
         </div>
-        {emailLogs.length > 0 && (
-          <button
-            onClick={onClearLogs}
-            className="flex items-center gap-2 px-4 py-2 bg-rose-600/10 hover:bg-rose-600 text-rose-400 hover:text-white border border-rose-500/20 hover:border-transparent rounded-xl text-xs font-bold transition duration-200 cursor-pointer"
-          >
-            <Trash2 className="w-4 h-4" />
-            Clear Logs
-          </button>
-        )}
       </div>
 
       {/* Top filter bar */}
@@ -172,8 +163,8 @@ export default function EmailLogs({ emailLogs, onClearLogs }) {
                   </div>
                   <div>
                     <label className="text-[11px] text-slate-500 font-semibold mb-1 block">Status</label>
-                    <span className="inline-flex items-center gap-1.5 text-emerald-400 font-semibold text-sm mt-1">
-                      <CheckCircle2 className="w-4 h-4" />
+                    <span className="inline-flex items-center gap-1.5 text-emerald-400 font-semibold text-xs border border-emerald-500/20 px-2 py-0.5 rounded-md mt-1">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
                       sent
                     </span>
                   </div>
@@ -188,7 +179,7 @@ export default function EmailLogs({ emailLogs, onClearLogs }) {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <div className="bg-dark-900 border border-slate-850 p-4 rounded-xl">
+                  <div className="bg-dark-900 border border-slate-850 p-4 rounded-xl max-h-[50vh] overflow-y-auto">
                     <div className="text-xs text-slate-400 mb-2">Subject: <span className="font-bold text-white">{selectedLog.subject}</span></div>
                     <div className="h-px bg-slate-800 w-full mb-3"></div>
                     <pre className="text-sm text-slate-300 font-sans whitespace-pre-wrap leading-relaxed">

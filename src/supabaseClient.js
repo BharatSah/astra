@@ -4,9 +4,11 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-// Check if we have valid-looking Supabase credentials, but bypass during testing
-const isTestMode = typeof window !== 'undefined' && window.location.search.includes('test=true');
-const hasSupabase = !isTestMode && 
+// Check if we have valid-looking Supabase credentials, but bypass during local E2E testing.
+const isTestMode = import.meta.env.DEV && typeof window !== 'undefined' && window.location.search.includes('test=true');
+const forceLocalFallback = import.meta.env.DEV && import.meta.env.VITE_FORCE_LOCAL_AUTH === 'true';
+const hasSupabase = !isTestMode &&
+                    !forceLocalFallback &&
                     supabaseUrl && 
                     supabaseUrl !== 'YOUR_SUPABASE_URL' && 
                     supabaseAnonKey && 
@@ -51,7 +53,7 @@ const DEFAULT_LOCAL_DATA = {
         secure: false,
         username: 'project.astra.notifications@gmail.com',
         password: 'xxxx xxxx xxxx xxxx',
-        senderName: 'Project Astra Admin',
+        senderName: 'Astra Admin',
         senderEmail: 'project.astra.notifications@gmail.com'
       }
     },
@@ -60,11 +62,11 @@ const DEFAULT_LOCAL_DATA = {
       value: {
         expiry_warning: {
           subject: 'Warning: Your service {service_name} expires in {days} days',
-          body: 'Dear {customer_name},\n\nThis is an automated reminder that your subscription for {service_name} is expiring on {expiry_date}.\n\nPlease renew it to avoid service interruption.\n\nBest regards,\nProject Astra'
+          body: 'Dear {customer_name},\n\nThis is an automated reminder that your subscription for {service_name} is expiring on {expiry_date}.\n\nPlease renew it to avoid service interruption.\n\nBest regards,\nAstra'
         },
         expiry_expired: {
           subject: 'Critical: Your service {service_name} has expired',
-          body: 'Dear {customer_name},\n\nThis is to inform you that your subscription for {service_name} expired on {expiry_date}.\n\nPlease renew it immediately to avoid deactivation.\n\nBest regards,\nProject Astra'
+          body: 'Dear {customer_name},\n\nThis is to inform you that your subscription for {service_name} expired on {expiry_date}.\n\nPlease renew it immediately to avoid deactivation.\n\nBest regards,\nAstra'
         },
         email_recipient: {
           to_email: 'admin@projectastra.com',
@@ -73,7 +75,7 @@ const DEFAULT_LOCAL_DATA = {
         },
         payment_reminder: {
           subject: 'Reminder: Payment due for {service_name}',
-          body: 'Dear {customer_name},\n\nThis is a friendly reminder that a payment of {amount} {currency} is due on {due_date} for your {service_name} service.\n\nPlease process the payment before the due date.\n\nBest regards,\nProject Astra'
+          body: 'Dear {customer_name},\n\nThis is a friendly reminder that a payment of {amount} {currency} is due on {due_date} for your {service_name} service.\n\nPlease process the payment before the due date.\n\nBest regards,\nAstra'
         }
       }
     }

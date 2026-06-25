@@ -105,7 +105,7 @@ export default function ExpiryManagement({ onNotify, onTriggerEmail }) {
     const daysLeft = Math.ceil((expiry.getTime() - today.getTime()) / (1000 * 3600 * 24));
 
     let subject = tpl?.expiry_expired?.subject || 'Critical: Your service {service_name} has expired';
-    let body = tpl?.expiry_expired?.body || 'Dear {customer_name},\n\nYour service {service_name} expired on {expiry_date}.\n\nPlease renew immediately.\n\nBest regards,\nProject Astra';
+    let body = tpl?.expiry_expired?.body || 'Dear {customer_name},\n\nYour service {service_name} expired on {expiry_date}.\n\nPlease renew immediately.\n\nBest regards,\nAstra';
 
     subject = subject
       .replace(/{customer_name}/g, customer.cname)

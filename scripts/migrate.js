@@ -18,7 +18,7 @@ const port = 5432;
 const database = 'postgres';
 const user = `postgres.${projectRef}`;
 
-console.log('\n🚀 Project Astra Cloud Database Migrator');
+console.log('\n🚀 Astra Cloud Database Migrator');
 console.log('----------------------------------------');
 console.log(`Connecting to database pooler for project: ${projectRef}`);
 

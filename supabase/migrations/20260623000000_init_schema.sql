@@ -1,4 +1,4 @@
--- Initial Schema Migration for Project Astra
+-- Initial Schema Migration for Astra
 
 -- Enable UUID extension if not enabled
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
@@ -122,11 +122,11 @@ INSERT INTO system_settings (key, value) VALUES
 ('email_templates', '{
   "expiry_warning": {
     "subject": "Warning: Your service {service_name} expires in {days} days",
-    "body": "Dear {customer_name},\n\nThis is an automated reminder that your subscription for {service_name} is expiring on {expiry_date}.\n\nPlease renew it to avoid service interruption.\n\nBest regards,\nProject Astra"
+    "body": "Dear {customer_name},\n\nThis is an automated reminder that your subscription for {service_name} is expiring on {expiry_date}.\n\nPlease renew it to avoid service interruption.\n\nBest regards,\nAstra"
   },
   "expiry_expired": {
     "subject": "Critical: Your service {service_name} has expired",
-    "body": "Dear {customer_name},\n\nThis is to inform you that your subscription for {service_name} expired on {expiry_date}.\n\nPlease renew it immediately to avoid deactivation.\n\nBest regards,\nProject Astra"
+    "body": "Dear {customer_name},\n\nThis is to inform you that your subscription for {service_name} expired on {expiry_date}.\n\nPlease renew it immediately to avoid deactivation.\n\nBest regards,\nAstra"
   },
   "email_recipient": {
     "to_email": "",
@@ -135,7 +135,7 @@ INSERT INTO system_settings (key, value) VALUES
   },
   "payment_reminder": {
     "subject": "Reminder: Payment due for {service_name}",
-    "body": "Dear {customer_name},\n\nThis is a friendly reminder that a payment of {amount} {currency} is due on {due_date} for your {service_name} service.\n\nPlease process the payment before the due date.\n\nBest regards,\nProject Astra"
+    "body": "Dear {customer_name},\n\nThis is a friendly reminder that a payment of {amount} {currency} is due on {due_date} for your {service_name} service.\n\nPlease process the payment before the due date.\n\nBest regards,\nAstra"
   }
 }'::jsonb)
 ON CONFLICT (key) DO NOTHING;

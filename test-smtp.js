@@ -60,9 +60,9 @@ async function testSmtp() {
 
     console.log(`Sending test email to ${targetEmail}...`);
     const info = await transporter.sendMail({
-      from: `"${smtpConfig.senderName || 'Project Astra'}" <${smtpConfig.senderEmail || smtpConfig.username}>`,
+      from: `"${smtpConfig.senderName || 'Astra'}" <${smtpConfig.senderEmail || smtpConfig.username}>`,
       to: targetEmail,
-      subject: "Test Email from Project Astra 🚀",
+      subject: "Test Email from Astra 🚀",
       text: "Hello! If you are reading this, your SMTP configuration is working perfectly.",
       html: "<b>Hello!</b><br>If you are reading this, your SMTP configuration is working perfectly. 🚀",
     });

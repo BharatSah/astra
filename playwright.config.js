@@ -20,11 +20,12 @@ export default defineConfig({
   webServer: {
     command: 'npm run dev',
     url: 'http://localhost:5173',
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false,
     timeout: 120000,
     env: {
-      VITE_SUPABASE_URL: '',
-      VITE_SUPABASE_ANON_KEY: ''
+      VITE_FORCE_LOCAL_AUTH: 'true',
+      VITE_SUPABASE_URL: 'YOUR_SUPABASE_URL',
+      VITE_SUPABASE_ANON_KEY: 'YOUR_SUPABASE_ANON_KEY'
     }
   },
 });

@@ -139,6 +139,15 @@ export default function SmtpConfig({ onNotify }) {
     due_date: '2026-07-05'
   };
 
+  // Escape user-controlled text before injecting into innerHTML to prevent stored XSS
+  // via email template bodies (e.g. <script>, <img onerror>).
+  const escapeHtml = (str) => String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
   const getReplacedSubject = () => {
     const tpl = templates[selectedTemplateKey];
     if (!tpl) return '';
@@ -152,9 +161,11 @@ export default function SmtpConfig({ onNotify }) {
   const getReplacedBody = () => {
     const tpl = templates[selectedTemplateKey];
     if (!tpl) return '';
-    let body = tpl.body || '';
+    // Escape the raw body first so any HTML in the template is treated as text,
+    // then convert newlines to <br /> for preview formatting.
+    let body = escapeHtml(tpl.body || '');
     Object.keys(sampleData).forEach(key => {
-      body = body.replaceAll(`{${key}}`, sampleData[key]);
+      body = body.replaceAll(`{${key}}`, escapeHtml(sampleData[key]));
     });
     return body.split('\n').join('<br />');
   };

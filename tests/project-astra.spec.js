@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Project Astra - E2E UI & Flow Suite', () => {
+test.describe('Astra - E2E UI & Flow Suite', () => {
   
   test.beforeEach(async ({ page }) => {
     // Navigate to the app root page with test query parameter for local sandbox fallback
@@ -8,8 +8,8 @@ test.describe('Project Astra - E2E UI & Flow Suite', () => {
   });
 
   test('should verify brand logo and sidebar branding elements', async ({ page }) => {
-    // Check if the logo branding "Project Astra" is present
-    const branding = page.locator('span', { hasText: 'Project Astra' });
+    // Check if the logo branding "Astra" is present
+    const branding = page.locator('span', { hasText: 'Astra' });
     await expect(branding.first()).toBeVisible();
     
     // Verify Dashboard heading exists
@@ -21,6 +21,8 @@ test.describe('Project Astra - E2E UI & Flow Suite', () => {
     // 1. Navigate to Password Vault
     await page.click('button:has-text("Password Vault")');
     await expect(page.locator('h1', { hasText: 'Password' })).toBeVisible();
+    await page.fill('input[placeholder="Master passphrase"]', 'test-vault-passphrase');
+    await page.click('button:has-text("Unlock Vault")');
 
     // 2. Test search feature
     const searchInput = page.locator('input[placeholder="Search platform, username..."]');
@@ -126,6 +128,47 @@ test.describe('Project Astra - E2E UI & Flow Suite', () => {
     
     // Verify reminder is in the list
     await expect(page.locator('text=Jane E2E Doe')).toBeVisible();
+  });
+
+  test('should verify login with default credentials, edit profile, and logout', async ({ page }) => {
+    // 1. Navigate without test query parameter to show Login page
+    await page.goto('/');
+    await expect(page.locator('text=Astra')).toBeVisible();
+    await expect(page.locator('text=Sign In')).toBeVisible();
+    
+    // 2. Fill login details and login
+    await page.fill('input[type="email"]', 'bharat.shah@mithilacoders.com');
+    await page.fill('input[type="password"]', 'bharat123');
+    await page.click('button:has-text("Sign In")');
+    
+    // 3. Confirm logged in by looking for dashboard
+    await expect(page.locator('h1', { hasText: 'Dashboard' })).toBeVisible();
+    
+    // 4. Confirm sidebar user details
+    await expect(page.locator('text=bharat.shah').first()).toBeVisible();
+    await expect(page.locator('text=bharat.shah@mithilacoders.com')).toBeVisible();
+    
+    // 5. Navigate to settings -> User Profile and change name
+    await page.click('button:has-text("System Settings")');
+    await page.click('button:has-text("User Profile")');
+    await expect(page.locator('h2', { hasText: 'User Profile' })).toBeVisible();
+    
+    // Change name
+    const nameInput = page.locator('input[placeholder="e.g. bharat.shah"]');
+    await nameInput.fill('bharat.new');
+    await nameInput.blur();
+    
+    // Save details click
+    await page.click('button:has-text("Save Account Details")');
+    
+    // Verify it changed in sidebar bottom
+    await expect(page.locator('text=bharat.new').first()).toBeVisible();
+    
+    // 6. Click Logout in profile screen
+    await page.click('button:has-text("Sign Out Account")');
+    
+    // Confirms back on login screen
+    await expect(page.locator('text=Sign In')).toBeVisible();
   });
 
 });
