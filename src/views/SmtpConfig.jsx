@@ -1,5 +1,5 @@
-﻿import { useState, useEffect } from 'react';
-import { supabase } from '../supabaseClient.js';
+import { useState } from 'react';
+import { useSmtpConfig } from '../controllers/useSmtpConfig.js';
 import {
   AlertTriangle,
   Check,
@@ -20,114 +20,43 @@ import {
 } from 'lucide-react';
 
 export default function SmtpConfig({ onNotify }) {
+  const {
+    smtp, setSmtp, templates, setTemplates,
+    savingSmtp, savingTemplates, testingConnection, testLogs,
+    saveSmtp, saveTemplates, insertToken, runDiagnostic
+  } = useSmtpConfig({ notify: onNotify });
+
   const [activeSubTab, setActiveSubTab] = useState('server');
   const [showPassword, setShowPassword] = useState(false);
   const [copiedScript, setCopiedScript] = useState(false);
-
-  const [smtp, setSmtp] = useState({
-    host: 'smtp.gmail.com',
-    port: 587,
-    secure: false,
-    username: '',
-    password: '',
-    senderName: 'Astra Notifications',
-    senderEmail: ''
-  });
-
-  const [templates, setTemplates] = useState({
-    expiry_warning: { subject: '', body: '' },
-    expiry_expired: { subject: '', body: '' },
-    email_recipient: { to_email: '', warning_recipient_type: 'admin', expired_recipient_type: 'customer' },
-    payment_reminder: { subject: '', body: '' }
-  });
-
-  const [savingSmtp, setSavingSmtp] = useState(false);
-  const [savingTemplates, setSavingTemplates] = useState(false);
   const [selectedTemplateKey, setSelectedTemplateKey] = useState('expiry_warning');
-
-  const [testingConnection, setTestingConnection] = useState(false);
-  const [testLogs, setTestLogs] = useState([]);
   const [tabDirection, setTabDirection] = useState('forward');
-
-  const fetchSystemSettings = async () => {
-    try {
-      const { data, error } = await supabase.from('system_settings').select('*');
-      if (error) throw error;
-      if (data) {
-        const smtpData = data.find(item => item.key === 'smtp_config');
-        if (smtpData) setSmtp(smtpData.value);
-
-        const templateData = data.find(item => item.key === 'email_templates');
-        if (templateData) setTemplates(templateData.value);
-      }
-    } catch (err) {
-      console.error('Error fetching system settings:', err.message);
-    }
-  };
-
-  useEffect(() => {
-    fetchSystemSettings();
-  }, []);
 
   const handleSaveSmtp = async (e) => {
     e.preventDefault();
-    setSavingSmtp(true);
-    try {
-      const { error } = await supabase.from('system_settings').upsert({
-        key: 'smtp_config',
-        value: smtp
-      });
-      if (error) throw error;
-      onNotify('success', 'SMTP settings saved successfully');
-    } catch (err) {
-      console.error('Error saving SMTP settings:', err.message);
-      onNotify('error', 'Failed to save SMTP settings');
-    } finally {
-      setSavingSmtp(false);
-    }
+    await saveSmtp();
   };
 
   const handleSaveTemplates = async (e) => {
     e.preventDefault();
-    setSavingTemplates(true);
-    try {
-      const { error } = await supabase.from('system_settings').upsert({
-        key: 'email_templates',
-        value: templates
-      });
-      if (error) throw error;
-      onNotify('success', 'Email templates saved successfully');
-    } catch (err) {
-      console.error('Error saving templates:', err.message);
-      onNotify('error', 'Failed to save templates');
-    } finally {
-      setSavingTemplates(false);
-    }
+    await saveTemplates();
   };
 
   const handleInsertToken = (fieldKey, token) => {
-    const element = document.getElementById(`${selectedTemplateKey}_${fieldKey}`);
-    if (!element) return;
-    const start = element.selectionStart;
-    const end = element.selectionEnd;
-    const text = element.value;
-    const before = text.slice(0, start);
-    const after = text.slice(end);
-    const newVal = before + token + after;
-
-    setTemplates((prev) => ({
-      ...prev,
-      [selectedTemplateKey]: {
-        ...prev[selectedTemplateKey],
-        [fieldKey]: newVal
-      }
-    }));
-
-    setTimeout(() => {
-      element.focus();
-      element.setSelectionRange(start + token.length, start + token.length);
-    });
+    insertToken(fieldKey, token, selectedTemplateKey);
   };
+
+  const handleCopyScript = () => {
+    navigator.clipboard.writeText('node test-smtp.js');
+    setCopiedScript(true);
+    setTimeout(() => setCopiedScript(false), 2000);
+  };
+
+  const runLocalSmtpDiagnostic = () => {
+    runDiagnostic();
+  };
+
+  const isSmtpConfigured = smtp.username && smtp.password;
 
   const sampleData = {
     customer_name: 'Alexander Wright',
@@ -169,36 +98,6 @@ export default function SmtpConfig({ onNotify }) {
     });
     return body.split('\n').join('<br />');
   };
-
-  const handleCopyScript = () => {
-    navigator.clipboard.writeText('node test-smtp.js');
-    setCopiedScript(true);
-    setTimeout(() => setCopiedScript(false), 2000);
-  };
-
-  const runLocalSmtpDiagnostic = () => {
-    setTestingConnection(true);
-    setTestLogs([]);
-    const stages = [
-      { text: 'Querying SMTP credentials from system_settings...', delay: 500 },
-      { text: `Connection target: ${smtp.host}:${smtp.port}`, delay: 1200 },
-      { text: 'Authenticating credentials via Google Secure Token Auth...', delay: 2000 },
-      { text: 'Handshake confirmed. Establishing SSL/TLS tunnel...', delay: 2800 },
-      { text: 'SUCCESS: SMTP transporter is verified and ready!', delay: 3500 }
-    ];
-
-    stages.forEach(stage => {
-      setTimeout(() => {
-        setTestLogs(prev => [...prev, stage.text]);
-        if (stage.text.includes('SUCCESS')) {
-          setTestingConnection(false);
-          onNotify('success', 'Local SMTP configuration validated!');
-        }
-      }, stage.delay);
-    });
-  };
-
-  const isSmtpConfigured = smtp.username && smtp.password;
 
   const tabs = [
     { id: 'server', label: 'SMTP Server', icon: Server },
@@ -495,7 +394,7 @@ export default function SmtpConfig({ onNotify }) {
                   >
                     <div className="flex items-center justify-between mb-1">
                       <span className={`text-sm font-bold ${selected ? 'text-brand-300' : 'text-slate-200 group-hover:text-white'}`}>{meta.title}</span>
-                      {selected && <ChevronRight className="w-4 h-4 text-brand-400" />}
+                      {selected && <ChevronRight className="w-4 h-4 text-violet-400" />}
                     </div>
                     <p className="text-[11px] text-slate-400 leading-snug">{meta.description}</p>
                   </button>
@@ -603,7 +502,7 @@ export default function SmtpConfig({ onNotify }) {
                         key={item.token}
                         type="button"
                         onClick={() => handleInsertToken('body', item.token)}
-                        className="px-2 py-1 bg-slate-800 hover:bg-brand-600 hover:text-white text-brand-300 text-[10px] font-semibold rounded-md border border-slate-700 hover:border-brand-500 transition-all duration-200 cursor-pointer"
+                        className="px-2 py-1 bg-white/5 hover:bg-violet-600 hover:text-white text-violet-300 text-[10px] font-semibold rounded-md border border-white/10 hover:border-violet-500 transition-all duration-200 cursor-pointer"
                       >
                         {item.label}
                       </button>

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Cloudinary Image Upload Utility
  * Performs client-side unsigned uploads to Cloudinary using configuration variables from env.
  */

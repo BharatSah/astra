@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Client-side AES-GCM encryption helpers for vault credentials.
  *
  * Scope and limitations (read before relying on this):
