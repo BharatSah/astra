@@ -118,6 +118,72 @@ const mockSupabase = {
   isFallback: true
 };
 
-export const supabase = hasSupabase ? createClient(supabaseUrl, supabaseAnonKey) : mockSupabase;
+const realSupabase = hasSupabase ? createClient(supabaseUrl, supabaseAnonKey) : null;
+let fallbackLogged = false;
+
+// Wrapper that executes a real Supabase query; if it fails with a table or
+// network error, silently falls back to the localStorage mock so the UI keeps
+// working even when Supabase tables are missing.
+async function withFallback(operation) {
+  if (!realSupabase) {
+    return operation(mockSupabase);
+  }
+  try {
+    return await operation(realSupabase);
+  } catch (err) {
+    const message = err?.message || '';
+    const isMissingTable = /relation ".*" does not exist|Table '\w+' doesn't exist|42P01|could not connect|NetworkError|Failed to fetch/i.test(message);
+    if (isMissingTable) {
+      if (!fallbackLogged) {
+        console.warn('Supabase query failed; falling back to localStorage mock.', err);
+        fallbackLogged = true;
+      }
+      return operation(mockSupabase);
+    }
+    throw err;
+  }
+}
+
+export const supabase = {
+  from(tableName) {
+    return {
+      select: (...args) => build(async (client) => client.from(tableName).select(...args)),
+      insert: (values) => build(async (client) => client.from(tableName).insert(values)),
+      update: (values) => ({
+        eq: (column, value) => build(async (client) => client.from(tableName).update(values).eq(column, value))
+      }),
+      delete: () => ({
+        eq: (column, value) => build(async (client) => client.from(tableName).delete().eq(column, value))
+      }),
+      upsert: (values) => build(async (client) => client.from(tableName).upsert(values))
+    };
+  },
+  auth: realSupabase ? realSupabase.auth : {
+    getUser: async () => ({ data: { user: null }, error: null }),
+    getSession: async () => ({ data: { session: null }, error: null }),
+    onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
+    signInWithPassword: async () => ({ data: { user: null }, error: { message: 'Supabase not configured' } }),
+    signOut: async () => ({ error: null }),
+    updateUser: async () => ({ data: { user: null }, error: { message: 'Supabase not configured' } })
+  },
+  isFallback: !hasSupabase
+};
+
+function build(queryFn) {
+  const chain = {
+    order: (column, options) => build(async (client) => {
+      const previous = await queryFn(client);
+      return previous.order(column, options);
+    }),
+    eq: (column, value) => build(async (client) => {
+      const previous = await queryFn(client);
+      return previous.eq(column, value);
+    }),
+    then: (onfulfilled, onrejected) => {
+      return withFallback(queryFn).then(onfulfilled, onrejected);
+    }
+  };
+  return chain;
+}
 
 export const getSupabaseConfig = () => ({ hasSupabase, supabaseUrl, supabaseAnonKey });
