@@ -26,7 +26,8 @@ import {
   Server,
   Laptop,
   User,
-  Fingerprint
+  Eye,
+  EyeOff
 } from 'lucide-react';
 
 // Per-feature accent mapping drives the active-nav indicator color so each
@@ -52,10 +53,9 @@ export default function App() {
     syncUserFromSession,
     login,
     logout,
-    passkeyReady,
-    hasPasskey,
-    passkeySetup,
-    passkeyLogin
+    hasLoginPassword,
+    setPassword,
+    changePassword
   } = useAuth(notify);
 
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -99,6 +99,9 @@ export default function App() {
             setCurrentUser={updateUser}
             syncUserFromSession={syncUserFromSession}
             onLogout={handleLogout}
+            hasPassword={hasLoginPassword}
+            onSetPassword={setPassword}
+            onChangePassword={changePassword}
           />
         );
       default:
@@ -122,10 +125,6 @@ export default function App() {
         onNotify={notify}
         authLoading={authLoading}
         onLogin={handleLogin}
-        passkeyReady={passkeyReady}
-        hasPasskey={hasPasskey}
-        passkeySetup={passkeySetup}
-        passkeyLogin={passkeyLogin}
       />
     );
   }
@@ -299,25 +298,20 @@ export default function App() {
             </div>
 
             <div className="mt-3 rounded-2xl border border-white/5 bg-white/[0.025] p-3">
-              <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center justify-between gap-3">
                 <div className="flex min-w-0 gap-2.5">
-                  <span className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-rose-500/20 bg-rose-500/10 text-rose-300">
-                    <Mail className="h-3.5 w-3.5" />
+                  <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-rose-500/20 bg-rose-500/10 text-rose-300">
+                    <Mail className="h-3 w-3" />
                   </span>
                   <div className="min-w-0 leading-none">
-                    <span className="block whitespace-nowrap text-xs font-bold text-slate-200">Emails</span>
-                    <span className="mt-1.5 block text-[10px] font-semibold text-slate-500">{emailStatus} today</span>
+                    <span className="block whitespace-nowrap text-xs font-bold text-slate-200">Email limit</span>
+                    <span className="mt-1 block text-[10px] font-semibold text-slate-500">{emailStatus}</span>
                   </div>
-                </div>
-                <div className="rounded-xl border border-rose-500/20 bg-rose-500/10 px-2.5 py-1.5 text-right shadow-inner shadow-white/5 shrink-0">
-                  <span className="block text-sm font-black text-rose-200 tabular-nums leading-none">
-                    {emailsSentToday}/{dailyEmailTarget}
-                  </span>
                 </div>
               </div>
 
               <div
-                className="mt-3 h-2 overflow-hidden rounded-full border border-white/5 bg-dark-950/80"
+                className="mt-2 h-1.5 overflow-hidden rounded-full border border-white/5 bg-dark-950/80"
                 role="progressbar"
                 aria-label="Emails sent today"
                 aria-valuenow={Math.round(emailProgress)}
@@ -328,10 +322,6 @@ export default function App() {
                   className="h-full rounded-full bg-gradient-to-r from-rose-500 via-pink-400 to-amber-300 transition-all duration-500"
                   style={{ width: `${emailProgress}%` }}
                 />
-              </div>
-              <div className="mt-2 flex items-center justify-between text-[10px] font-bold text-slate-500">
-                <span>Daily SMTP limit</span>
-                <span className="tabular-nums">{Math.round(emailProgress)}%</span>
               </div>
             </div>
           </div>
@@ -384,33 +374,7 @@ export default function App() {
   );
 }
 
-function Login({ onNotify, authLoading, onLogin, passkeyReady, hasPasskey, passkeySetup, passkeyLogin }) {
-  const [loading, setLoading] = useState(false);
-
-  const handlePasskeySetup = async () => {
-    setLoading(true);
-    try {
-      await passkeySetup();
-      onNotify('success', 'Passkey registered. Use it to sign in from now on.');
-    } catch (error) {
-      onNotify('error', error?.message || 'Passkey setup failed');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handlePasskeyLogin = async () => {
-    setLoading(true);
-    try {
-      await passkeyLogin();
-      onNotify('success', 'Welcome back!');
-    } catch (error) {
-      onNotify('error', error?.message || 'Passkey authentication failed');
-    } finally {
-      setLoading(false);
-    }
-  };
-
+function Login({ onNotify, authLoading, onLogin }) {
   return (
     <div className="min-h-screen flex items-center justify-center relative bg-dark-950 px-4 overflow-hidden">
       {/* Ambient layered background */}
@@ -425,69 +389,6 @@ function Login({ onNotify, authLoading, onLogin, passkeyReady, hasPasskey, passk
           <p className="text-xs text-slate-500 mt-1 font-medium tracking-wide uppercase">Security &amp; Expiry Control</p>
         </div>
 
-        {!passkeyReady && (
-          <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs text-center">
-            Passkeys are not supported in this browser. Use a secure context (HTTPS or localhost) and a modern browser.
-          </div>
-        )}
-
-        {passkeyReady && !hasPasskey && (
-          <>
-            <p className="text-sm text-slate-400 text-center">
-              {isFallbackMode
-                ? 'Sign in with your device passkey instead of a password.'
-                : 'Add a device passkey so you can unlock the vault and sign in faster next time.'}
-            </p>
-            <button
-              onClick={handlePasskeySetup}
-              disabled={loading || authLoading}
-              className="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 rounded-xl text-white font-bold text-sm transition-all duration-200 shadow-lg shadow-emerald-500/20 shimmer-btn cursor-pointer mt-2 flex items-center justify-center gap-2"
-            >
-              {loading || authLoading ? (
-                <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-white"></div>
-              ) : (
-                <>
-                  <Fingerprint className="w-4 h-4" />
-                  {isFallbackMode ? 'Register Passkey' : 'Set Up Passkey'}
-                </>
-              )}
-            </button>
-          </>
-        )}
-
-        {passkeyReady && hasPasskey && (
-          <>
-            <p className="text-sm text-slate-400 text-center">
-              Verify with your device passkey to unlock the app.
-            </p>
-            <button
-              onClick={handlePasskeyLogin}
-              disabled={loading || authLoading}
-              className="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 rounded-xl text-white font-bold text-sm transition-all duration-200 shadow-lg shadow-emerald-500/20 shimmer-btn cursor-pointer mt-2 flex items-center justify-center gap-2"
-            >
-              {loading || authLoading ? (
-                <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-white"></div>
-              ) : (
-                <>
-                  <Fingerprint className="w-4 h-4" />
-                  Sign in with Passkey
-                </>
-              )}
-            </button>
-          </>
-        )}
-
-        <div className="relative py-2 my-2">
-          <div className="absolute inset-0 flex items-center" aria-hidden="true">
-            <div className="w-full border-t border-white/10"></div>
-          </div>
-          <div className="relative flex justify-center">
-            <span className="bg-dark-950 px-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">
-              {isFallbackMode ? 'or continue with password' : 'or sign in with Supabase'}
-            </span>
-          </div>
-        </div>
-
         <PasswordLoginForm onLogin={onLogin} onNotify={onNotify} authLoading={authLoading} />
       </div>
     </div>
@@ -497,6 +398,7 @@ function Login({ onNotify, authLoading, onLogin, passkeyReady, hasPasskey, passk
 function PasswordLoginForm({ onLogin, onNotify, authLoading }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
@@ -531,14 +433,24 @@ function PasswordLoginForm({ onLogin, onNotify, authLoading }) {
       </div>
       <div>
         <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Password</label>
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="********"
-          className="w-full px-4 py-3 rounded-xl text-slate-200 glass-input text-sm"
-          required
-        />
+        <div className="relative">
+          <input
+            type={showPassword ? 'text' : 'password'}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="********"
+            className="w-full pl-4 pr-11 py-3 rounded-xl text-slate-200 glass-input text-sm"
+            required
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(prev => !prev)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-amber-400 transition"
+            tabIndex={-1}
+          >
+            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+          </button>
+        </div>
       </div>
 
       <div className="flex items-center justify-between text-xs pt-1">

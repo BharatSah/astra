@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase, isFallbackMode } from '../models/dbClient.js';
 import { 
   getStoredLoginPassword, 
+  hasStoredLoginPassword,
   setStoredLoginPassword
 } from '../models/authModel.js';
 import { hashPassword, verifyPassword } from '../services/passwordHashService.js';
@@ -63,6 +64,8 @@ export function useAuth(notify) {
     return DEFAULT_USER;
   });
   const [hasPasskey, setHasPasskey] = useState(false);
+
+  const [hasLoginPassword, setHasLoginPassword] = useState(() => isFallbackMode && hasStoredLoginPassword());
 
   const passkeyReady = isPasskeySupported();
 
@@ -149,6 +152,49 @@ export function useAuth(notify) {
     updateUser({ username, email, avatar: initial });
   }, [updateUser]);
 
+  const setPassword = useCallback(async (newPassword) => {
+    if (!isFallbackMode || isTestMode) {
+      return { ok: false, error: 'Password management is handled by Supabase Auth in cloud mode.' };
+    }
+    if (!newPassword || newPassword.length < 6) {
+      return { ok: false, error: 'Password must be at least 6 characters.' };
+    }
+    try {
+      const saltHash = await hashPassword(newPassword);
+      setStoredLoginPassword(saltHash);
+      setHasLoginPassword(true);
+      return { ok: true };
+    } catch (err) {
+      console.error('Failed to set login password:', err);
+      return { ok: false, error: 'Failed to secure login password.' };
+    }
+  }, []);
+
+  const changePassword = useCallback(async (currentPassword, newPassword) => {
+    if (!isFallbackMode || isTestMode) {
+      return { ok: false, error: 'Password management is handled by Supabase Auth in cloud mode.' };
+    }
+    const stored = getStoredLoginPassword();
+    if (!stored) {
+      return { ok: false, error: 'No login password is set yet.' };
+    }
+    const valid = await verifyPassword(currentPassword, stored);
+    if (!valid) {
+      return { ok: false, error: 'Current password is incorrect.' };
+    }
+    if (!newPassword || newPassword.length < 6) {
+      return { ok: false, error: 'New password must be at least 6 characters.' };
+    }
+    try {
+      const saltHash = await hashPassword(newPassword);
+      setStoredLoginPassword(saltHash);
+      return { ok: true };
+    } catch (err) {
+      console.error('Failed to change login password:', err);
+      return { ok: false, error: 'Failed to update login password.' };
+    }
+  }, []);
+
   const passkeySetup = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     const userId = user?.id;
@@ -218,6 +264,9 @@ export function useAuth(notify) {
     syncUserFromSession,
     login,
     logout,
+    hasLoginPassword,
+    setPassword,
+    changePassword,
     passkeyReady,
     hasPasskey,
     passkeySetup,

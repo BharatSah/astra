@@ -6,10 +6,12 @@ import {
   Globe,
   Image,
   Laptop,
+  Lock,
   LogOut,
   Plus,
   Save,
   Server,
+  Shield,
   Trash2,
   X
 } from 'lucide-react';
@@ -20,7 +22,10 @@ export default function Settings({
   currentUser,
   setCurrentUser,
   syncUserFromSession,
-  onLogout
+  onLogout,
+  hasPassword = false,
+  onSetPassword,
+  onChangePassword
 }) {
   const {
     services,
@@ -156,6 +161,10 @@ export default function Settings({
           onProfileFiles={handleProfileFiles}
           isUploadingProfile={isUploadingProfile}
           onSave={saveProfile}
+          hasPassword={hasPassword}
+          onSetPassword={onSetPassword}
+          onChangePassword={onChangePassword}
+          onNotify={onNotify}
         />
       )}
 
@@ -314,7 +323,11 @@ function ProfileSection({
   profileInputRef,
   onProfileFiles,
   isUploadingProfile,
-  onSave
+  onSave,
+  hasPassword,
+  onSetPassword,
+  onChangePassword,
+  onNotify
 }) {
   const [showUpload, setShowUpload] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -432,6 +445,13 @@ function ProfileSection({
             )}
           </div>
         </div>
+
+        <PasswordSecurityPanel
+          hasPassword={hasPassword}
+          onSetPassword={onSetPassword}
+          onChangePassword={onChangePassword}
+          onNotify={onNotify}
+        />
 
         {showUpload && (
           <div
@@ -719,6 +739,101 @@ function Field({ label, children }) {
       </label>
       {children}
     </div>
+  );
+}
+
+function PasswordSecurityPanel({
+  hasPassword,
+  onSetPassword,
+  onChangePassword,
+  onNotify
+}) {
+  const [loginForm, setLoginForm] = useState({ current: '', next: '', confirm: '' });
+  const updateLoginForm = (field, value) => setLoginForm(prev => ({ ...prev, [field]: value }));
+
+  const handleLoginPasswordSubmit = async (event) => {
+    event.preventDefault();
+    if (loginForm.next !== loginForm.confirm) {
+      onNotify('error', 'New password confirmation does not match.');
+      return;
+    }
+
+    const result = hasPassword
+      ? await onChangePassword?.(loginForm.current, loginForm.next)
+      : await onSetPassword?.(loginForm.next);
+
+    if (result?.ok) {
+      setLoginForm({ current: '', next: '', confirm: '' });
+      onNotify('success', hasPassword ? 'Login password updated.' : 'Login password secured.');
+    } else {
+      onNotify('error', result?.error || 'Unable to update login password.');
+    }
+  };
+
+  return (
+    <div className="mt-8 pt-6 border-t border-white/5">
+      <div className="flex items-start gap-3 mb-5">
+        <div className="h-10 w-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
+          <Shield className="w-5 h-5" />
+        </div>
+        <div>
+          <h3 className="font-bold text-slate-200 text-sm">Account Security</h3>
+          <p className="text-xs text-slate-400 mt-1">
+            {isFallbackMode
+              ? 'Local mode stores password hashes in this browser only.'
+              : 'Cloud mode uses Supabase Auth for account password changes.'}
+          </p>
+        </div>
+      </div>
+
+      <form onSubmit={handleLoginPasswordSubmit} className="space-y-4 p-4 rounded-xl bg-dark-950/50 border border-white/5 max-w-md">
+        <div className="flex items-center gap-2 text-sm font-bold text-slate-200">
+          <Lock className="w-4 h-4 text-amber-400" />
+          {hasPassword ? 'Change Login Password' : 'Set Login Password'}
+        </div>
+
+        {hasPassword && (
+          <PasswordInput
+            label="Current Password"
+            value={loginForm.current}
+            onChange={(value) => updateLoginForm('current', value)}
+            placeholder="Current login password"
+          />
+        )}
+        <PasswordInput
+          label="New Password"
+          value={loginForm.next}
+          onChange={(value) => updateLoginForm('next', value)}
+          placeholder="At least 6 characters"
+        />
+        <PasswordInput
+          label="Confirm New Password"
+          value={loginForm.confirm}
+          onChange={(value) => updateLoginForm('confirm', value)}
+          placeholder="Repeat new password"
+        />
+        <button
+          type="submit"
+          className="w-full py-2.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 rounded-xl text-white font-bold text-xs transition duration-200"
+        >
+          {hasPassword ? 'Change Login Password' : 'Set Login Password'}
+        </button>
+      </form>
+    </div>
+  );
+}
+
+function PasswordInput({ label, value, onChange, placeholder }) {
+  return (
+    <Field label={label}>
+      <input
+        type="password"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={placeholder}
+        className="w-full px-4 py-3 rounded-xl text-slate-200 glass-input text-sm"
+      />
+    </Field>
   );
 }
 
