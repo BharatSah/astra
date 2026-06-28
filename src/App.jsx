@@ -74,17 +74,24 @@ export default function App() {
 
   const handleLogout = () => { logout(); };
   const handleLogin = async (email, password) => { await login(email, password); };
+  const handleTabChange = (tab, subTab = null) => {
+    setActiveTab(tab);
+    if (tab === 'settings' && subTab) {
+      setActiveSettingsTab(subTab);
+      setIsSettingsExpanded(true);
+    }
+  };
 
   const renderActiveComponent = () => {
     switch (activeTab) {
       case 'dashboard':
-        return <Dashboard onTabChange={setActiveTab} />;
+        return <Dashboard onTabChange={handleTabChange} />;
       case 'expiry':
-        return <ExpiryManagement onNotify={notify} onTriggerEmail={triggerEmail} onTabChange={setActiveTab} />;
+        return <ExpiryManagement onNotify={notify} onTriggerEmail={triggerEmail} onTabChange={handleTabChange} />;
       case 'password':
-        return <PasswordManagement onNotify={notify} onTabChange={setActiveTab} />;
+        return <PasswordManagement onNotify={notify} onTabChange={handleTabChange} />;
       case 'payment':
-        return <PaymentReminders onNotify={notify} onTriggerEmail={triggerEmail} onTabChange={setActiveTab} />;
+        return <PaymentReminders onNotify={notify} onTriggerEmail={triggerEmail} onTabChange={handleTabChange} />;
       case 'smtp':
         return <SmtpConfig onNotify={notify} />;
       case 'emaillogs':
@@ -260,8 +267,8 @@ export default function App() {
         </div>
 
         {/* Sidebar user profile footer */}
-        <div className="pt-4 border-t border-white/5 mt-auto space-y-3">
-          <div className="relative overflow-hidden rounded-[1.35rem] border border-white/10 bg-[linear-gradient(145deg,rgba(15,23,42,0.92),rgba(3,7,18,0.92))] p-3 shadow-2xl shadow-black/25">
+        <div className="pt-3 border-t border-white/5 mt-auto">
+          <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-[linear-gradient(145deg,rgba(15,23,42,0.92),rgba(3,7,18,0.92))] p-3 shadow-xl shadow-black/20">
             <div className="absolute inset-x-3 top-0 h-px bg-gradient-to-r from-transparent via-amber-300/40 to-transparent" />
             <div className="absolute -right-10 -top-12 h-24 w-24 rounded-full bg-amber-400/10 blur-2xl pointer-events-none" />
 
@@ -271,14 +278,14 @@ export default function App() {
                   <img
                     src={currentUser.avatar}
                     alt={`${currentUser.username}'s avatar`}
-                    className="h-11 w-11 rounded-2xl object-cover shadow-md shadow-amber-500/20 border border-white/10"
+                    className="h-10 w-10 rounded-xl object-cover shadow-md shadow-amber-500/20 border border-white/10"
                   />
                 ) : (
-                  <div className="h-11 w-11 rounded-2xl bg-gradient-to-br from-amber-400 via-orange-500 to-rose-500 flex items-center justify-center font-black text-white shadow-md shadow-amber-500/20">
+                  <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-amber-400 via-orange-500 to-rose-500 flex items-center justify-center font-black text-white shadow-md shadow-amber-500/20">
                     {currentUser.avatar || 'B'}
                   </div>
                 )}
-                <span className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full border-2 border-slate-950 bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.9)]" />
+                <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-slate-950 bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.9)]" />
               </div>
 
               <div className="min-w-0 flex-1 pr-1">
@@ -290,43 +297,38 @@ export default function App() {
 
               <button
                 onClick={handleLogout}
-                className="h-9 w-9 inline-flex items-center justify-center rounded-xl border border-white/5 bg-white/[0.03] text-slate-500 transition duration-200 hover:border-rose-500/20 hover:bg-rose-500/10 hover:text-rose-400 shrink-0 cursor-pointer"
+                className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-white/5 bg-white/[0.03] text-slate-500 transition duration-200 hover:border-rose-500/20 hover:bg-rose-500/10 hover:text-rose-400 shrink-0 cursor-pointer"
                 title="Logout"
               >
                 <LogOut className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="mt-3 rounded-2xl border border-white/5 bg-white/[0.025] p-3">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex min-w-0 gap-2.5">
-                  <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-rose-500/20 bg-rose-500/10 text-rose-300">
-                    <Mail className="h-3 w-3" />
-                  </span>
-                  <div className="min-w-0 leading-none">
-                    <span className="block whitespace-nowrap text-xs font-bold text-slate-200">Email limit</span>
-                    <span className="mt-1 block text-[10px] font-semibold text-slate-500">{emailStatus}</span>
-                  </div>
+            <div className="mt-2 flex items-center gap-2">
+              <Mail className="w-3 h-3 text-rose-400 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between text-[10px] font-semibold text-slate-400 mb-0.5">
+                  <span>Email limit</span>
+                  <span>{emailStatus}</span>
                 </div>
-              </div>
-
-              <div
-                className="mt-2 h-1.5 overflow-hidden rounded-full border border-white/5 bg-dark-950/80"
-                role="progressbar"
-                aria-label="Emails sent today"
-                aria-valuenow={Math.round(emailProgress)}
-                aria-valuemin="0"
-                aria-valuemax="100"
-              >
                 <div
-                  className="h-full rounded-full bg-gradient-to-r from-rose-500 via-pink-400 to-amber-300 transition-all duration-500"
-                  style={{ width: `${emailProgress}%` }}
-                />
+                  className="h-1.5 overflow-hidden rounded-full border border-white/5 bg-dark-950/80"
+                  role="progressbar"
+                  aria-label="Emails sent today"
+                  aria-valuenow={Math.round(emailProgress)}
+                  aria-valuemin="0"
+                  aria-valuemax="100"
+                >
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-rose-500 via-pink-400 to-amber-300 transition-all duration-500"
+                    style={{ width: `${emailProgress}%` }}
+                  />
+                </div>
               </div>
             </div>
           </div>
 
-          <p className="text-[9px] text-slate-600 text-center tracking-wide">Version 1.0.0 (c) Astra</p>
+          <p className="text-[9px] text-slate-600 text-center tracking-wide mt-2">Version 1.0.0 (c) Astra</p>
         </div>
       </aside>
 

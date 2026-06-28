@@ -216,7 +216,7 @@ export default function PaymentReminders({ onNotify, onTriggerEmail, onTabChange
                     <Info className="w-7 h-7" />
                   </div>
                   <p>You must create a service in Settings first.</p>
-                  <button onClick={() => { setIsModalOpen(false); onTabChange?.('settings'); }} className="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer">
+                  <button onClick={() => { setIsModalOpen(false); onTabChange?.('settings', 'services'); }} className="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer">
                     Go to Settings
                   </button>
                 </div>

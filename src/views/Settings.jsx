@@ -353,105 +353,105 @@ function ProfileSection({
 
   return (
     <div className="flex-1 flex flex-col h-full space-y-4 animate-slide-up">
-      <div className="glass-panel p-8 rounded-2xl border border-white/5 flex-1 flex flex-col min-h-[calc(100vh-12rem)] relative">
-        <div className="flex flex-col md:flex-row items-center md:items-start gap-8">
-          <div className="shrink-0">
+      <div className="glass-panel p-6 rounded-2xl border border-white/5 flex-1 flex flex-col min-h-[calc(100vh-12rem)] relative">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Left: profile card */}
+          <div className="bg-white/[0.03] rounded-2xl border border-white/5 p-6 flex flex-col items-center text-center">
             <button
               type="button"
               title="Change profile picture"
               onClick={() => setShowUpload(true)}
-              className="group relative rounded-full focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+              className="group relative rounded-full focus:outline-none focus:ring-2 focus:ring-amber-500/50 mb-4"
             >
               <img
                 src={avatar}
                 alt={`${username}'s avatar`}
-                className={`h-32 w-32 rounded-full object-cover border-2 border-white/10 shadow-2xl shadow-amber-500/10 transition-transform group-hover:scale-[1.02] ${isImageAvatar ? '' : 'hidden'}`}
+                className={`h-28 w-28 rounded-full object-cover border-2 border-white/10 shadow-2xl shadow-amber-500/10 transition-transform group-hover:scale-[1.02] ${isImageAvatar ? '' : 'hidden'}`}
                 onError={(event) => { event.currentTarget.style.display = 'none'; }}
               />
               {!isImageAvatar && (
-                <div className="h-32 w-32 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center font-black text-white text-5xl shadow-2xl shadow-amber-500/10 transition-transform group-hover:scale-[1.02]">
+                <div className="h-28 w-28 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center font-black text-white text-4xl shadow-2xl shadow-amber-500/10 transition-transform group-hover:scale-[1.02]">
                   {avatar}
                 </div>
               )}
-              <span className="absolute bottom-1 right-1 flex h-8 w-8 items-center justify-center rounded-full bg-amber-500 text-white shadow-lg opacity-0 transition-opacity group-hover:opacity-100">
-                <Image className="h-4 w-4" />
+              <span className="absolute bottom-1 right-1 flex h-7 w-7 items-center justify-center rounded-full bg-amber-500 text-white shadow-lg opacity-0 transition-opacity group-hover:opacity-100">
+                <Image className="h-3.5 w-3.5" />
               </span>
             </button>
-          </div>
 
-          <div className="flex-1 w-full md:w-auto text-center md:text-left space-y-4">
             {!isEditing ? (
               <>
                 <div>
-                  <h3 className="text-2xl font-black text-slate-100">{username}</h3>
-                  <p className="text-sm text-slate-400 mt-1">{email}</p>
+                  <h3 className="text-xl font-black text-slate-100">{username}</h3>
+                  <p className="text-xs text-slate-400 mt-1">{email}</p>
                 </div>
-                <div className="flex flex-col sm:flex-row items-center gap-3">
+                <div className="flex flex-wrap items-center justify-center gap-3 mt-4">
                   <button
                     onClick={() => setIsEditing(true)}
-                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 text-xs font-bold transition duration-200 cursor-pointer"
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 text-xs font-bold transition duration-200 cursor-pointer"
                   >
-                    <Save className="w-4 h-4" />
+                    <Save className="w-3.5 h-3.5" />
                     Edit Profile
                   </button>
                   <button
                     onClick={onLogout}
-                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-rose-600/10 hover:bg-rose-600 text-rose-400 hover:text-white border border-rose-500/20 hover:border-transparent text-xs font-bold transition duration-200 cursor-pointer"
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-600/10 hover:bg-rose-600 text-rose-400 hover:text-white border border-rose-500/20 hover:border-transparent text-xs font-bold transition duration-200 cursor-pointer"
                   >
-                    <LogOut className="w-4 h-4" />
-                    Sign Out Account
+                    <LogOut className="w-3.5 h-3.5" />
+                    Sign Out
                   </button>
                 </div>
               </>
             ) : (
-              <div className="space-y-4 max-w-md">
+              <div className="w-full max-w-xs space-y-3 mt-2">
                 <div className="text-left">
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Display Name</label>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Display Name</label>
                   <input
                     type="text"
                     value={draftUsername}
                     onChange={(event) => setDraftUsername(event.target.value)}
-                    className="w-full px-4 py-3 rounded-xl text-slate-200 glass-input text-sm"
+                    className="w-full px-3 py-2.5 rounded-xl text-slate-200 glass-input text-sm"
                     placeholder="Your name"
                   />
                 </div>
                 <div className="text-left">
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Email Address</label>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Email Address</label>
                   <input
                     type="email"
                     value={draftEmail}
                     onChange={(event) => setDraftEmail(event.target.value)}
-                    className="w-full px-4 py-3 rounded-xl text-slate-200 glass-input text-sm"
+                    className="w-full px-3 py-2.5 rounded-xl text-slate-200 glass-input text-sm"
                     placeholder="you@example.com"
                   />
                 </div>
-                <div className="flex items-center justify-center md:justify-start gap-3">
+                <div className="flex items-center justify-center gap-3 pt-1">
                   <button
                     onClick={handleSave}
-                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 rounded-xl text-white font-bold text-xs shadow-lg shadow-amber-500/10 transition duration-200 cursor-pointer"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 rounded-xl text-white font-bold text-xs shadow-lg shadow-amber-500/10 transition duration-200 cursor-pointer"
                   >
-                    <Save className="w-4 h-4" />
-                    Save Changes
+                    <Save className="w-3.5 h-3.5" />
+                    Save
                   </button>
                   <button
                     onClick={handleCancel}
-                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 text-xs font-bold transition duration-200 cursor-pointer"
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 text-xs font-bold transition duration-200 cursor-pointer"
                   >
-                    <X className="w-4 h-4" />
+                    <X className="w-3.5 h-3.5" />
                     Cancel
                   </button>
                 </div>
               </div>
             )}
           </div>
-        </div>
 
-        <PasswordSecurityPanel
-          hasPassword={hasPassword}
-          onSetPassword={onSetPassword}
-          onChangePassword={onChangePassword}
-          onNotify={onNotify}
-        />
+          {/* Right: Account Security */}
+          <PasswordSecurityPanel
+            hasPassword={hasPassword}
+            onSetPassword={onSetPassword}
+            onChangePassword={onChangePassword}
+            onNotify={onNotify}
+          />
+        </div>
 
         {showUpload && (
           <div
@@ -771,7 +771,7 @@ function PasswordSecurityPanel({
   };
 
   return (
-    <div className="mt-8 pt-6 border-t border-white/5">
+    <div className="bg-white/[0.03] rounded-2xl border border-white/5 p-6 flex flex-col h-full">
       <div className="flex items-start gap-3 mb-5">
         <div className="h-10 w-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
           <Shield className="w-5 h-5" />
@@ -786,7 +786,7 @@ function PasswordSecurityPanel({
         </div>
       </div>
 
-      <form onSubmit={handleLoginPasswordSubmit} className="space-y-4 p-4 rounded-xl bg-dark-950/50 border border-white/5 max-w-md">
+      <form onSubmit={handleLoginPasswordSubmit} className="space-y-4 p-4 rounded-xl bg-dark-950/50 border border-white/5">
         <div className="flex items-center gap-2 text-sm font-bold text-slate-200">
           <Lock className="w-4 h-4 text-amber-400" />
           {hasPassword ? 'Change Login Password' : 'Set Login Password'}

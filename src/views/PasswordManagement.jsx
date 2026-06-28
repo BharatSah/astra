@@ -314,7 +314,7 @@ export default function PasswordManagement({ onNotify, onTabChange }) {
                     <Laptop className="w-7 h-7" />
                   </div>
                   <p>You must add a platform in Settings first.</p>
-                  <button onClick={() => { setIsModalOpen(false); onTabChange?.('settings'); }} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer">
+                  <button onClick={() => { setIsModalOpen(false); onTabChange?.('settings', 'platforms'); }} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer">
                     Go to Settings
                   </button>
                 </div>
