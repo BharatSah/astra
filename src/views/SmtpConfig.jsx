@@ -607,7 +607,7 @@ export default function SmtpConfig({ onNotify }) {
 
               <div className="space-y-3">
                 <p className="text-xs text-slate-400 leading-relaxed">
-                  Browsers block direct SMTP sockets for security. Run the local CLI script to verify credentials, ports, and TLS handshake end-to-end.
+                  Sends a real test email through the deployed Supabase <code className="text-brand-300">send-email</code> edge function using your saved SMTP credentials.
                 </p>
 
                 <div className="bg-slate-950 rounded-xl p-4 border border-slate-850 space-y-3">

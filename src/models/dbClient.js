@@ -166,6 +166,9 @@ export const supabase = {
     signOut: async () => ({ error: null }),
     updateUser: async () => ({ data: { user: null }, error: { message: 'Supabase not configured' } })
   },
+  functions: realSupabase ? realSupabase.functions : {
+    invoke: async () => ({ data: null, error: { message: 'Supabase not configured' } })
+  },
   isFallback: !hasSupabase
 };
 

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { fetchSettingsObject, upsertSetting } from '../models/settingsModel.js';
+import { testSmtpConnection } from '../services/emailDeliveryService.js';
 
 // Controller: SMTP config + email templates + diagnostics. Owns settings load,
 // save (smtp_config / email_templates upsert), token insertion, and the staged
@@ -84,26 +85,35 @@ export function useSmtpConfig({ notify }) {
     });
   }, []);
 
-  const runDiagnostic = useCallback(() => {
+  const runDiagnostic = useCallback(async () => {
     setTestingConnection(true);
-    setTestLogs([]);
-    const stages = [
-      { text: 'Querying SMTP credentials from system_settings...', delay: 500 },
-      { text: `Connection target: ${smtp.host}:${smtp.port}`, delay: 1200 },
-      { text: 'Authenticating credentials via Google Secure Token Auth...', delay: 2000 },
-      { text: 'Handshake confirmed. Establishing SSL/TLS tunnel...', delay: 2800 },
-      { text: 'SUCCESS: SMTP transporter is verified and ready!', delay: 3500 }
-    ];
-    stages.forEach(stage => {
-      setTimeout(() => {
-        setTestLogs(prev => [...prev, stage.text]);
-        if (stage.text.includes('SUCCESS')) {
-          setTestingConnection(false);
-          notify('success', 'Local SMTP configuration validated!');
-        }
-      }, stage.delay);
+    setTestLogs(['Invoking send-email edge function...']);
+
+    const testTo = templates.email_recipient?.to_email || smtp.senderEmail || smtp.username;
+    if (!testTo) {
+      setTestLogs(prev => [...prev, 'ERROR: Set an admin email in Templates or SMTP sender address.']);
+      setTestingConnection(false);
+      notify('error', 'Set an admin recipient email before testing SMTP.');
+      return;
+    }
+
+    setTestLogs(prev => [...prev, `Target: ${smtp.host}:${smtp.port || 587}`, `Sending test email to ${testTo}...`]);
+
+    const result = await testSmtpConnection({
+      to: testTo,
+      subject: 'Astra SMTP Test',
+      textBody: 'This is a test email from Astra. If you received this, SMTP is working correctly.',
     });
-  }, [smtp.host, smtp.port, notify]);
+
+    if (result.success) {
+      setTestLogs(prev => [...prev, `SUCCESS: ${result.message || 'Test email dispatched.'}`]);
+      notify('success', `Test email sent to ${testTo}`);
+    } else {
+      setTestLogs(prev => [...prev, `FAILED: ${result.error}`]);
+      notify('error', result.error || 'SMTP test failed');
+    }
+    setTestingConnection(false);
+  }, [smtp, templates.email_recipient?.to_email, notify]);
 
   return {
     smtp, setSmtp, templates, setTemplates,

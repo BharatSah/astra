@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { isFallbackMode } from '../models/dbClient.js';
 import { insertEmailLog } from '../models/emailLogsModel.js';
+import { sendEmail } from '../services/emailDeliveryService.js';
 
-// Controller: simulated SMTP email dispatch. Owns the in-memory email log list,
-// persists to localStorage (fallback db) and syncs to Supabase when online.
-// Mirrors the original App.jsx handleTriggerEmail + initial-load behaviour.
+// Controller: SMTP email dispatch via the Supabase send-email Edge Function.
+// Falls back to simulated local-only dispatch when running in fallback/offline mode.
 export function useEmailDispatch(notify) {
   const [emailLogs, setEmailLogs] = useState([]);
 
@@ -21,12 +21,20 @@ export function useEmailDispatch(notify) {
   }, []);
 
   const triggerEmail = useCallback(async (emailObj) => {
+    const result = await sendEmail({
+      to: emailObj.recipient,
+      subject: emailObj.subject,
+      textBody: emailObj.body,
+    });
+
     const timestamp = new Date().toISOString();
+    const status = result.success ? 'sent' : 'failed';
     const newLog = {
       id: Math.random().toString(36).substring(2, 9),
       sent_at: timestamp,
-      status: 'sent',
-      ...emailObj
+      status,
+      error: result.error,
+      ...emailObj,
     };
 
     setEmailLogs(prev => {
@@ -50,14 +58,19 @@ export function useEmailDispatch(notify) {
           recipient: emailObj.recipient,
           subject: emailObj.subject,
           body: emailObj.body,
-          status: 'sent'
+          status,
         });
       } catch (e) {
-        console.warn('Supabase email logs sync failed, running in fallback local:', e.message);
+        console.warn('Supabase email logs sync failed:', e.message);
       }
     }
 
-    notify('success', `SMTP Alert dispatched to ${emailObj.recipient}!`);
+    if (result.success) {
+      const label = result.source === 'simulated' ? 'Simulated dispatch' : 'Email sent';
+      notify('success', `${label} to ${emailObj.recipient}!`);
+    } else {
+      notify('error', `Failed to send email to ${emailObj.recipient}: ${result.error}`);
+    }
   }, [notify]);
 
   return { emailLogs, triggerEmail };
