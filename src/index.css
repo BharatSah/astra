@@ -188,3 +188,17 @@
 @utility sub-fade-in {
   animation: subFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
+/* Native date input: make the calendar picker icon visible on dark themes
+   and style the picker to match the app. */
+input[type="date"] {
+  color-scheme: dark;
+}
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.7) sepia(1) saturate(4) hue-rotate(120deg);
+  cursor: pointer;
+  opacity: 0.8;
+  transition: opacity 0.2s ease;
+}
+input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}

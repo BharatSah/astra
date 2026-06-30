@@ -17,39 +17,14 @@ test.describe('Astra - E2E UI & Flow Suite', () => {
     await expect(heading).toBeVisible();
   });
 
-  test('should navigate to Password Vault, search credentials, and create a new entry', async ({ page }) => {
-    // 1. Navigate to Password Vault
+  test('should navigate to Password Vault and show passkey unlock gate', async ({ page }) => {
+    // The vault is now passkey-protected (WebAuthn), which cannot be driven
+    // in a headless test browser. Verify the locked vault UI renders and the
+    // unlock affordance is present instead of the old passphrase input.
     await page.click('button:has-text("Password Vault")');
     await expect(page.locator('h1', { hasText: 'Password' })).toBeVisible();
-    await page.fill('input[placeholder="Master passphrase"]', 'test-vault-passphrase');
-    await page.click('button:has-text("Unlock Vault")');
-
-    // 2. Test search feature
-    const searchInput = page.locator('input[placeholder="Search platform, username..."]');
-    await searchInput.fill('Vercel');
-    // Vercel Console card should be visible, GitHub should not
-    await expect(page.locator('text=Vercel Console')).toBeVisible();
-    await expect(page.locator('text=GitHub')).not.toBeVisible();
-
-    // Clear search
-    await searchInput.fill('');
-
-    // 3. Add new credentials
-    await page.click('button:has-text("Add Password")');
-    
-    // Check modal header
-    await expect(page.locator('text=Store Credential')).toBeVisible();
-    
-    // Fill in values
-    await page.selectOption('select', 'Slack Workspace');
-    await page.fill('input[placeholder="e.g. john.doe@company.com"]', 'slack-astra-admin');
-    await page.fill('input[placeholder="Enter or generate a password"]', 'AstraSlack123!');
-    
-    // Submit form
-    await page.click('button:has-text("Save Credential")');
-    
-    // Check if Slack Workspace exists in list now
-    await expect(page.locator('text=Slack Workspace')).toBeVisible();
+    await expect(page.locator('button:has-text("Create Passkey & Unlock")')).toBeVisible();
+    await expect(page.locator('input[placeholder="Search platform, username..."]')).toBeHidden();
   });
 
   test('should navigate to System Settings and add a new service', async ({ page }) => {
@@ -135,38 +110,34 @@ test.describe('Astra - E2E UI & Flow Suite', () => {
     await page.goto('/');
     await expect(page.locator('text=Astra')).toBeVisible();
     await expect(page.locator('text=Sign In')).toBeVisible();
-    
+
     // 2. Fill login details and login
     await page.fill('input[type="email"]', 'bharat.shah@mithilacoders.com');
     await page.fill('input[type="password"]', 'bharat123');
     await page.click('button:has-text("Sign In")');
-    
+
     // 3. Confirm logged in by looking for dashboard
     await expect(page.locator('h1', { hasText: 'Dashboard' })).toBeVisible();
-    
+
     // 4. Confirm sidebar user details
     await expect(page.locator('text=bharat.shah').first()).toBeVisible();
     await expect(page.locator('text=bharat.shah@mithilacoders.com')).toBeVisible();
-    
-    // 5. Navigate to settings -> User Profile and change name
+
+    // 5. Navigate to settings -> User Profile and edit the display name
     await page.click('button:has-text("System Settings")');
     await page.click('button:has-text("User Profile")');
-    await expect(page.locator('h2', { hasText: 'User Profile' })).toBeVisible();
-    
-    // Change name
-    const nameInput = page.locator('input[placeholder="e.g. bharat.shah"]');
+    await page.click('button:has-text("Edit Profile")');
+
+    const nameInput = page.locator('input[placeholder="Your name"]');
     await nameInput.fill('bharat.new');
-    await nameInput.blur();
-    
-    // Save details click
-    await page.click('button:has-text("Save Account Details")');
-    
-    // Verify it changed in sidebar bottom
+    await page.click('button:has-text("Save")');
+
+    // Verify it changed in sidebar footer
     await expect(page.locator('text=bharat.new').first()).toBeVisible();
-    
-    // 6. Click Logout in profile screen
-    await page.click('button:has-text("Sign Out Account")');
-    
+
+    // 6. Sign out from the profile screen
+    await page.click('button:has-text("Sign Out")');
+
     // Confirms back on login screen
     await expect(page.locator('text=Sign In')).toBeVisible();
   });

@@ -65,7 +65,12 @@ export function useAuth(notify) {
   });
   const [hasPasskey, setHasPasskey] = useState(false);
 
-  const [hasLoginPassword, setHasLoginPassword] = useState(() => isFallbackMode && hasStoredLoginPassword());
+  const [hasLoginPassword, setHasLoginPassword] = useState(() => {
+    if (isTestMode) return false;
+    if (isFallbackMode) return hasStoredLoginPassword();
+    // Cloud mode: any authenticated email/password user already has a password.
+    return true;
+  });
 
   const passkeyReady = isPasskeySupported();
 
@@ -153,46 +158,60 @@ export function useAuth(notify) {
   }, [updateUser]);
 
   const setPassword = useCallback(async (newPassword) => {
-    if (!isFallbackMode || isTestMode) {
-      return { ok: false, error: 'Password management is handled by Supabase Auth in cloud mode.' };
+    if (isTestMode) {
+      return { ok: false, error: 'Password changes are disabled in test mode.' };
     }
     if (!newPassword || newPassword.length < 6) {
       return { ok: false, error: 'Password must be at least 6 characters.' };
     }
-    try {
-      const saltHash = await hashPassword(newPassword);
-      setStoredLoginPassword(saltHash);
-      setHasLoginPassword(true);
-      return { ok: true };
-    } catch (err) {
-      console.error('Failed to set login password:', err);
-      return { ok: false, error: 'Failed to secure login password.' };
+    if (isFallbackMode) {
+      try {
+        const saltHash = await hashPassword(newPassword);
+        setStoredLoginPassword(saltHash);
+        setHasLoginPassword(true);
+        return { ok: true };
+      } catch (err) {
+        console.error('Failed to set login password:', err);
+        return { ok: false, error: 'Failed to secure login password.' };
+      }
     }
+    // Cloud mode: set the user's Supabase Auth password.
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) return { ok: false, error: error.message };
+    setHasLoginPassword(true);
+    return { ok: true };
   }, []);
 
   const changePassword = useCallback(async (currentPassword, newPassword) => {
-    if (!isFallbackMode || isTestMode) {
-      return { ok: false, error: 'Password management is handled by Supabase Auth in cloud mode.' };
-    }
-    const stored = getStoredLoginPassword();
-    if (!stored) {
-      return { ok: false, error: 'No login password is set yet.' };
-    }
-    const valid = await verifyPassword(currentPassword, stored);
-    if (!valid) {
-      return { ok: false, error: 'Current password is incorrect.' };
+    if (isTestMode) {
+      return { ok: false, error: 'Password changes are disabled in test mode.' };
     }
     if (!newPassword || newPassword.length < 6) {
       return { ok: false, error: 'New password must be at least 6 characters.' };
     }
-    try {
-      const saltHash = await hashPassword(newPassword);
-      setStoredLoginPassword(saltHash);
-      return { ok: true };
-    } catch (err) {
-      console.error('Failed to change login password:', err);
-      return { ok: false, error: 'Failed to update login password.' };
+    if (isFallbackMode) {
+      const stored = getStoredLoginPassword();
+      if (!stored) return { ok: false, error: 'No login password is set yet.' };
+      const valid = await verifyPassword(currentPassword, stored);
+      if (!valid) return { ok: false, error: 'Current password is incorrect.' };
+      try {
+        const saltHash = await hashPassword(newPassword);
+        setStoredLoginPassword(saltHash);
+        return { ok: true };
+      } catch (err) {
+        console.error('Failed to change login password:', err);
+        return { ok: false, error: 'Failed to update login password.' };
+      }
     }
+    // Cloud mode: verify the current password by re-signing in, then update.
+    const { data: userData } = await supabase.auth.getUser();
+    const email = userData?.user?.email;
+    if (!email) return { ok: false, error: 'No authenticated user found.' };
+    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password: currentPassword });
+    if (signInError) return { ok: false, error: 'Current password is incorrect.' };
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) return { ok: false, error: error.message };
+    return { ok: true };
   }, []);
 
   const passkeySetup = useCallback(async () => {

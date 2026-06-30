@@ -12,8 +12,11 @@ import {
   Save,
   Server,
   Shield,
+  Eye,
+  EyeOff,
   Trash2,
-  X
+  X,
+  ExternalLink
 } from 'lucide-react';
 
 export default function Settings({
@@ -272,44 +275,76 @@ function PlatformsSection({ platforms, loading, onOpenAdd, onDelete }) {
           <EmptyState icon={Laptop} text="No platforms registered. Add your first platform to link credentials." />
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 flex-1 overflow-y-auto pr-2 pb-4 content-start">
-            {platforms.map(platform => (
-              <div key={platform.platform_name} className="p-4 rounded-xl bg-white/[0.03] border border-white/5 flex items-center justify-between gap-4 group">
-                <div className="flex items-center gap-3 truncate">
+            {platforms.map(platform => {
+              const url = platform.url ? (platform.url.startsWith('http') ? platform.url : `https://${platform.url}`) : null;
+              const host = platform.url ? platform.url.replace(/^https?:\/\//, '').replace(/\/.*/, '') : null;
+              return (
+              <div key={platform.platform_name} className="group relative flex flex-col rounded-2xl border border-white/5 bg-gradient-to-b from-white/[0.04] to-white/[0.01] overflow-hidden transition-all duration-300 hover:border-emerald-500/25 hover:-translate-y-1 hover:shadow-xl hover:shadow-emerald-500/10">
+                {/* Top accent line */}
+                <span className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-emerald-500/0 via-emerald-400/70 to-emerald-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+                {/* Logo header */}
+                <div className="relative flex items-center justify-center pt-6 pb-4">
+                  <div className="absolute inset-x-0 top-0 h-16 bg-[radial-gradient(ellipse_at_top,rgba(16,185,129,0.12),transparent_70%)] pointer-events-none" />
                   {platform.logo ? (
                     <img
                       src={platform.logo}
                       alt={`${platform.platform_name} logo`}
                       onError={(event) => { event.currentTarget.style.display = 'none'; }}
-                      className="w-10 h-10 rounded-xl object-contain bg-white/5 p-1 shrink-0 border border-white/10"
+                      className="relative h-14 w-14 rounded-2xl object-contain bg-white/[0.04] p-2 border border-white/10 shadow-lg shadow-black/20 transition-transform duration-300 group-hover:scale-105"
                     />
                   ) : (
-                    <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0 font-bold text-sm text-emerald-400">
+                    <div className="relative h-14 w-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center font-black text-lg text-emerald-400 shadow-lg shadow-emerald-500/10 transition-transform duration-300 group-hover:scale-105">
                       {platform.platform_name.charAt(0).toUpperCase()}
                     </div>
                   )}
-                  <div className="truncate">
-                    <h4 className="font-bold text-slate-200 text-sm truncate">{platform.platform_name}</h4>
-                    {platform.url && (
-                      <a
-                        href={platform.url.startsWith('http') ? platform.url : `https://${platform.url}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-[11px] text-emerald-400 hover:underline block truncate mt-0.5"
-                      >
-                        {platform.url}
-                      </a>
-                    )}
-                  </div>
                 </div>
-                <button
-                  onClick={() => onDelete(platform.platform_name)}
-                  className="p-2 text-slate-500 hover:text-rose-400 hover:bg-white/5 rounded-xl transition opacity-0 group-hover:opacity-100 shrink-0"
-                  title="Remove Platform"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+
+                {/* Body */}
+                <div className="px-4 pb-4 flex-1 flex flex-col">
+                  <h4 className="font-bold text-slate-100 text-sm text-center leading-tight line-clamp-2" title={platform.platform_name}>{platform.platform_name}</h4>
+                  {host ? (
+                    <a
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-1.5 flex items-center justify-center gap-1 text-[11px] text-emerald-400/80 hover:text-emerald-300 transition truncate"
+                      title={url}
+                    >
+                      <Globe className="w-3 h-3 shrink-0" />
+                      <span className="truncate">{host}</span>
+                    </a>
+                  ) : (
+                    <p className="mt-1.5 text-[11px] text-slate-600 text-center">No URL provided</p>
+                  )}
+                </div>
+
+                {/* Footer actions */}
+                <div className="flex items-center justify-between px-3 py-2.5 border-t border-white/5 bg-dark-950/30">
+                  {url ? (
+                    <a
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-400 hover:text-emerald-400 transition px-2 py-1 rounded-lg hover:bg-white/5"
+                      title="Open platform"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      Open
+                    </a>
+                  ) : <span />}
+                  <button
+                    onClick={() => onDelete(platform.platform_name)}
+                    className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-500 hover:text-rose-400 transition px-2 py-1 rounded-lg hover:bg-rose-500/10"
+                    title="Remove platform"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Remove
+                  </button>
+                </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
@@ -814,7 +849,7 @@ function PasswordSecurityPanel({
         />
         <button
           type="submit"
-          className="w-full py-2.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 rounded-xl text-white font-bold text-xs transition duration-200"
+          className="w-full py-3 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 rounded-xl text-white font-bold text-sm transition duration-200 shimmer-btn cursor-pointer"
         >
           {hasPassword ? 'Change Login Password' : 'Set Login Password'}
         </button>
@@ -824,15 +859,27 @@ function PasswordSecurityPanel({
 }
 
 function PasswordInput({ label, value, onChange, placeholder }) {
+  const [show, setShow] = useState(false);
   return (
     <Field label={label}>
-      <input
-        type="password"
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        placeholder={placeholder}
-        className="w-full px-4 py-3 rounded-xl text-slate-200 glass-input text-sm"
-      />
+      <div className="relative">
+        <input
+          type={show ? "text" : "password"}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder={placeholder}
+          className="w-full px-4 py-3 pr-11 rounded-xl text-slate-200 glass-input text-sm"
+        />
+        <button
+          type="button"
+          onClick={() => setShow((prev) => !prev)}
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-amber-400 transition"
+          tabIndex={-1}
+          title={show ? "Hide password" : "Show password"}
+        >
+          {show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+        </button>
+      </div>
     </Field>
   );
 }

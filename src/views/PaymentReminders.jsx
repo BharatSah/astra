@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { usePayments } from '../controllers/usePayments.js';
-import { Plus, Edit2, Trash2, Mail, CheckCircle, X, DollarSign, Clock, Info } from 'lucide-react';
+import { Plus, Edit2, Trash2, Mail, CheckCircle, X, DollarSign, Clock, Info, Calendar } from 'lucide-react';
 
 export default function PaymentReminders({ onNotify, onTriggerEmail, onTabChange }) {
   const {
@@ -239,7 +239,10 @@ export default function PaymentReminders({ onNotify, onTriggerEmail, onTabChange
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                     <div className="md:col-span-2">
                       <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Due Date <span className="text-rose-500">*</span></label>
-                      <input type="date" value={toPayDate} onChange={(e) => setToPayDate(e.target.value)} className="w-full px-4 py-3 rounded-xl text-slate-200 glass-input text-sm transition-all duration-200 focus:scale-[1.01]" required />
+                      <div className="relative">
+                        <Calendar className="w-4 h-4 text-sky-400/70 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                        <input type="date" value={toPayDate} onChange={(e) => setToPayDate(e.target.value)} className="w-full pl-11 pr-4 py-3 rounded-xl text-slate-200 glass-input text-sm transition-all duration-200 focus:scale-[1.01] cursor-pointer" required />
+                      </div>
                     </div>
                     <div>
                       <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Notify Before <span className="text-rose-500">*</span></label>
@@ -271,11 +274,18 @@ export default function PaymentReminders({ onNotify, onTriggerEmail, onTabChange
                         { value: 'pending', label: 'Pending', color: 'amber' },
                         { value: 'paid', label: 'Paid', color: 'emerald' },
                         { value: 'overdue', label: 'Overdue', color: 'rose' }
-                      ].map((opt) => (
-                        <button key={opt.value} type="button" onClick={() => setStatus(opt.value)} className={`px-4 py-2 rounded-xl text-xs font-bold border transition-all duration-200 cursor-pointer ${status === opt.value ? `bg-${opt.color}-500/20 border-${opt.color}-500/40 text-${opt.color}-300` : 'bg-white/[0.03] border-white/10 text-slate-400 hover:text-slate-200 hover:border-white/20'}`}>
+                      ].map((opt) => {
+                        const activeCls = opt.value === 'paid'
+                          ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300'
+                          : opt.value === 'overdue'
+                            ? 'bg-rose-500/20 border-rose-500/40 text-rose-300'
+                            : 'bg-amber-500/20 border-amber-500/40 text-amber-300';
+                        return (
+                        <button key={opt.value} type="button" onClick={() => setStatus(opt.value)} className={`px-4 py-2 rounded-xl text-xs font-bold border transition-all duration-200 cursor-pointer ${status === opt.value ? activeCls : 'bg-white/[0.03] border-white/10 text-slate-400 hover:text-slate-200 hover:border-white/20'}`}>
                           {opt.label}
                         </button>
-                      ))}
+                        );
+                      })}
                     </div>
                     <p className="mt-1.5 text-[11px] text-slate-500">Pending/overdue status is recalculated automatically based on the due date.</p>
                   </div>

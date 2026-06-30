@@ -27,7 +27,8 @@ import {
   Laptop,
   User,
   Eye,
-  EyeOff
+  EyeOff,
+  Menu
 } from 'lucide-react';
 
 // Per-feature accent mapping drives the active-nav indicator color so each
@@ -138,6 +139,13 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex relative">
+      {/* Mobile backdrop: tap to close sidebar */}
+      {isSidebarOpen && (
+        <div
+          className="lg:hidden fixed inset-0 z-30 bg-black/60 backdrop-blur-sm"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
       {/* Sidebar Navigation */}
       <aside
         className={`fixed inset-y-0 left-0 z-40 w-64 bg-dark-950/80 backdrop-blur-xl p-6 flex flex-col justify-between transform transition-transform duration-300 ${
@@ -334,6 +342,20 @@ export default function App() {
 
       {/* Main Panel layout container */}
       <div className="flex-1 flex flex-col min-h-screen overflow-hidden bg-dark-950">
+        {/* Mobile sidebar toggle */}
+        <div className="lg:hidden sticky top-0 z-30 flex items-center gap-3 px-4 py-3 bg-dark-950/90 backdrop-blur-xl border-b border-white/5">
+          <button
+            onClick={() => setIsSidebarOpen(true)}
+            className="p-2 text-slate-300 hover:text-white rounded-xl hover:bg-white/5 transition cursor-pointer"
+            title="Open Menu"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+          <div className="flex items-center gap-2">
+            <AstraLogo className="h-7 w-7" />
+            <span className="text-sm font-black tracking-wider uppercase bg-clip-text text-transparent bg-gradient-to-r from-amber-200 via-amber-400 to-orange-500">Astra</span>
+          </div>
+        </div>
 
         {/* Dynamic page content scroll wrapper */}
         <main className="flex-1 overflow-y-auto p-6 md:p-8 max-w-7xl w-full mx-auto pb-16">

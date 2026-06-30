@@ -147,15 +147,15 @@ async function withFallback(operation) {
 export const supabase = {
   from(tableName) {
     return {
-      select: (...args) => build(async (client) => client.from(tableName).select(...args)),
-      insert: (values) => build(async (client) => client.from(tableName).insert(values)),
+      select: (...args) => build((client) => client.from(tableName).select(...args)),
+      insert: (values) => build((client) => client.from(tableName).insert(values)),
       update: (values) => ({
-        eq: (column, value) => build(async (client) => client.from(tableName).update(values).eq(column, value))
+        eq: (column, value) => build((client) => client.from(tableName).update(values).eq(column, value))
       }),
       delete: () => ({
-        eq: (column, value) => build(async (client) => client.from(tableName).delete().eq(column, value))
+        eq: (column, value) => build((client) => client.from(tableName).delete().eq(column, value))
       }),
-      upsert: (values) => build(async (client) => client.from(tableName).upsert(values))
+      upsert: (values) => build((client) => client.from(tableName).upsert(values))
     };
   },
   auth: realSupabase ? realSupabase.auth : {
@@ -171,17 +171,11 @@ export const supabase = {
 
 function build(queryFn) {
   const chain = {
-    order: (column, options) => build(async (client) => {
-      const previous = await queryFn(client);
-      return previous.order(column, options);
-    }),
-    eq: (column, value) => build(async (client) => {
-      const previous = await queryFn(client);
-      return previous.eq(column, value);
-    }),
-    then: (onfulfilled, onrejected) => {
-      return withFallback(queryFn).then(onfulfilled, onrejected);
-    }
+    // Chain without awaiting: the builder is thenable, so awaiting resolves
+    // it to {data, error} (no .order/.eq) and crashes the next chain call.
+    order: (column, options) => build((client) => queryFn(client).order(column, options)),
+    eq: (column, value) => build((client) => queryFn(client).eq(column, value)),
+    then: (onfulfilled, onrejected) => withFallback(queryFn).then(onfulfilled, onrejected)
   };
   return chain;
 }

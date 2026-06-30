@@ -1,6 +1,6 @@
-﻿import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { usePasswords } from '../controllers/usePasswords.js';
-import { Search, Plus, Eye, EyeOff, Copy, ExternalLink, Trash2, Edit2, Key, RefreshCw, X, Laptop, Lock, Shield, Fingerprint } from 'lucide-react';
+import { Search, Plus, Eye, EyeOff, Copy, ExternalLink, Trash2, Edit2, Key, X, Laptop, Lock, Shield, Fingerprint } from 'lucide-react';
 import {
   hasRegisteredPasskey,
   authenticatePasskey,
@@ -46,26 +46,12 @@ export default function PasswordManagement({ onNotify, onTabChange }) {
     setIsModalOpen(true);
   };
 
-  const handleGeneratePassword = () => {
-    const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+~`|}{[]:;?><,./-=';
-    const length = 20;
-    const max = Math.floor(0xFFFFFFFF / chars.length) * chars.length;
-    const buf = new Uint32Array(1);
-    let generated = '';
-    while (generated.length < length) {
-      crypto.getRandomValues(buf);
-      if (buf[0] < max) generated += chars.charAt(buf[0] % chars.length);
-    }
-    setPassword(generated);
-    onNotify('success', 'Generated secure password!');
-  };
-
-  useState(() => {
-    // Immediately invoked state updater to avoid useEffect import churn
+  useEffect(() => {
+    // Probe passkey/vault availability once on mount.
     Promise.all([hasRegisteredPasskey(), hasWrappedVaultKey()]).then(([registered, hasVault]) => {
       setPasskeyState({ registered, hasVault });
     });
-  });
+  }, []);
 
   const handleUnlockVault = async () => {
     setUnlockError('');
@@ -215,68 +201,69 @@ export default function PasswordManagement({ onNotify, onTabChange }) {
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
           {filteredPasswords.map((pw) => {
             const plat = platforms.find(p => p.platform_name === pw.platform_name);
             return (
-              <div key={pw.id} className="glass-panel p-5 rounded-2xl border border-white/5 glass-panel-hover flex flex-col justify-between relative overflow-hidden">
-                <span className="absolute top-0 left-0 right-0 h-0.5 bg-emerald-400/40" />
-                <div>
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-3 truncate">
-                      {plat?.logo ? (
-                        <img src={plat.logo} alt={`${pw.platform_name} logo`} onError={(e) => { e.currentTarget.style.display = 'none'; }} className="w-10 h-10 rounded-xl object-contain bg-white/5 p-1 border border-white/10 shrink-0" />
-                      ) : (
-                        <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center font-bold text-xs text-emerald-400 shrink-0">
-                          {pw.platform_name.charAt(0).toUpperCase()}
-                        </div>
-                      )}
-                      <div className="truncate">
-                        <h3 className="font-bold text-base text-slate-100 truncate">{pw.platform_name}</h3>
-                        {plat?.url && (
-                          <a href={plat.url.startsWith('http') ? plat.url : `https://${plat.url}`} target="_blank" rel="noopener noreferrer" className="text-xs text-emerald-400 hover:underline flex items-center gap-1 mt-0.5 truncate">
-                            <span className="truncate">{plat.url.replace(/^https?:\/\//, '')}</span>
-                            <ExternalLink className="w-3 h-3 shrink-0 text-emerald-500" />
-                          </a>
-                        )}
+              <div key={pw.id} className="group glass-panel rounded-2xl border border-white/5 flex flex-col relative overflow-hidden transition-all duration-300 hover:border-emerald-500/25 hover:-translate-y-1 hover:shadow-xl hover:shadow-emerald-500/10">
+                <span className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-emerald-500/0 via-emerald-400/60 to-emerald-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+                {/* Header */}
+                <div className="flex items-center justify-between gap-3 p-4 pb-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    {plat?.logo ? (
+                      <img src={plat.logo} alt={`${pw.platform_name} logo`} onError={(e) => { e.currentTarget.style.display = 'none'; }} className="h-11 w-11 rounded-xl object-contain bg-white/[0.04] p-1.5 border border-white/10 shrink-0 transition-transform duration-300 group-hover:scale-105" />
+                    ) : (
+                      <div className="h-11 w-11 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center font-black text-base text-emerald-400 shrink-0 transition-transform duration-300 group-hover:scale-105">
+                        {pw.platform_name.charAt(0).toUpperCase()}
                       </div>
+                    )}
+                    <div className="min-w-0">
+                      <h3 className="font-bold text-sm text-slate-100 truncate leading-tight">{pw.platform_name}</h3>
+                      {plat?.url ? (
+                        <a href={plat.url.startsWith('http') ? plat.url : `https://${plat.url}`} target="_blank" rel="noopener noreferrer" className="text-[11px] text-emerald-400/80 hover:text-emerald-300 flex items-center gap-1 mt-0.5 truncate transition">
+                          <ExternalLink className="w-3 h-3 shrink-0" />
+                          <span className="truncate">{plat.url.replace(/^https?:\/\//, '')}</span>
+                        </a>
+                      ) : (
+                        <p className="text-[11px] text-slate-600 mt-0.5">No URL linked</p>
+                      )}
                     </div>
-                    <div className="flex items-center gap-1 bg-white/5 rounded-xl p-1 border border-white/10 shrink-0">
-                      <button onClick={() => handleOpenEditModal(pw)} className="p-1.5 text-slate-400 hover:text-emerald-400 rounded-lg hover:bg-emerald-500/10 transition" title="Edit Entry">
-                        <Edit2 className="w-3.5 h-3.5" />
-                      </button>
-                      <button onClick={() => handleDelete(pw.id, pw.platform_name)} className="p-1.5 text-slate-400 hover:text-rose-400 rounded-lg hover:bg-rose-500/10 transition" title="Delete Entry">
-                        <Trash2 className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button onClick={() => handleOpenEditModal(pw)} className="p-2 text-slate-500 hover:text-emerald-400 rounded-lg hover:bg-emerald-500/10 transition" title="Edit Entry">
+                      <Edit2 className="w-3.5 h-3.5" />
+                    </button>
+                    <button onClick={() => handleDelete(pw.id, pw.platform_name)} className="p-2 text-slate-500 hover:text-rose-400 rounded-lg hover:bg-rose-500/10 transition" title="Delete Entry">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Credentials body */}
+                <div className="mx-4 mb-4 space-y-2 bg-dark-950/60 rounded-xl border border-white/5 p-3.5">
+                  <div className="flex items-center justify-between gap-2 text-xs">
+                    <span className="text-slate-500 font-semibold uppercase tracking-wider text-[10px] shrink-0">User</span>
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className="text-slate-200 font-mono text-xs select-all truncate">{pw.username}</span>
+                      <button onClick={() => handleCopyToClipboard(pw.username, 'Username')} className="text-slate-500 hover:text-emerald-400 transition shrink-0" title="Copy Username">
+                        <Copy className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   </div>
-
-                  <div className="mt-5 space-y-3 bg-dark-950/60 p-3 rounded-xl border border-white/5">
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="text-slate-400 font-medium">Username</span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-slate-200 font-mono select-all">{pw.username}</span>
-                        <button onClick={() => handleCopyToClipboard(pw.username, 'Username')} className="text-slate-400 hover:text-emerald-400 transition" title="Copy Username">
-                          <Copy className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="text-slate-400 font-medium">Password</span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-slate-200 font-mono select-all">
-                          {visiblePasswords[pw.id] ? (decryptedPasswords[pw.id] ?? '************') : '************'}
-                        </span>
-                        <div className="flex items-center gap-1">
-                          <button onClick={() => toggleVisibility(pw)} className="text-slate-400 hover:text-emerald-400 transition" title={visiblePasswords[pw.id] ? "Hide Password" : "Show Password"}>
-                            {visiblePasswords[pw.id] ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                          </button>
-                          <button onClick={() => handleCopyPassword(pw)} className="text-slate-400 hover:text-emerald-400 transition" title="Copy Password">
-                            <Copy className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </div>
+                  <div className="h-px bg-white/5" />
+                  <div className="flex items-center justify-between gap-2 text-xs">
+                    <span className="text-slate-500 font-semibold uppercase tracking-wider text-[10px] shrink-0">Pass</span>
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className="text-slate-200 font-mono text-xs select-all truncate">
+                        {visiblePasswords[pw.id] ? (decryptedPasswords[pw.id] ?? '************') : '************'}
+                      </span>
+                      <button onClick={() => toggleVisibility(pw)} className="text-slate-500 hover:text-emerald-400 transition shrink-0" title={visiblePasswords[pw.id] ? "Hide Password" : "Show Password"}>
+                        {visiblePasswords[pw.id] ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                      </button>
+                      <button onClick={() => handleCopyPassword(pw)} className="text-slate-500 hover:text-emerald-400 transition shrink-0" title="Copy Password">
+                        <Copy className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -335,15 +322,9 @@ export default function PasswordManagement({ onNotify, onTabChange }) {
                   </div>
 
                   <div>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">Password <span className="text-rose-500">*</span></label>
-                      <button type="button" onClick={handleGeneratePassword} className="flex items-center gap-1 text-[10px] font-bold text-emerald-400 hover:text-emerald-300 transition-colors cursor-pointer">
-                        <RefreshCw className="w-3 h-3" />
-                        Generate strong password
-                      </button>
-                    </div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Password <span className="text-rose-500">*</span></label>
                     <div className="relative">
-                      <input type="text" placeholder="Enter or generate a password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full pl-4 pr-12 py-3 rounded-xl text-slate-200 glass-input text-sm font-mono tracking-wider transition-all duration-200 focus:scale-[1.01]" required />
+                      <input type="text" placeholder="Enter the password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full pl-4 pr-12 py-3 rounded-xl text-slate-200 glass-input text-sm font-mono tracking-wider transition-all duration-200 focus:scale-[1.01]" required />
                       {password && (
                         <button type="button" onClick={() => handleCopyToClipboard(password, 'Password')} className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-slate-400 hover:text-emerald-400 hover:bg-white/5 transition-all duration-200 cursor-pointer" title="Copy password">
                           <Copy className="w-4 h-4" />
@@ -359,7 +340,7 @@ export default function PasswordManagement({ onNotify, onTabChange }) {
                       })}
                     </div>
                     <p className="mt-1.5 text-[11px] text-slate-500">
-                      {password.length >= 16 ? 'Great - this password looks strong.' : password.length > 0 ? 'Tip: use at least 16 characters for better security.' : 'A strong password will be generated automatically if you click above.'}
+                      {password.length >= 16 ? 'Great - this password looks strong.' : password.length > 0 ? 'Tip: use at least 16 characters for better security.' : 'Enter the credential password to store in the vault.'}
                     </p>
                   </div>
 
