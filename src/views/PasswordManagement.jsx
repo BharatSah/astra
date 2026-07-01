@@ -211,7 +211,14 @@ export default function PasswordManagement({ onNotify, onTabChange }) {
                 <div className="flex items-center justify-between gap-3 p-4 pb-3">
                   <div className="flex items-center gap-3 min-w-0">
                     {plat?.logo ? (
-                      <img src={plat.logo} alt={`${pw.platform_name} logo`} onError={(e) => { e.currentTarget.style.display = 'none'; }} className="h-11 w-11 rounded-xl object-contain bg-white/[0.04] p-1.5 border border-white/10 shrink-0 transition-transform duration-300 group-hover:scale-105" />
+                      <div className="h-11 w-11 shrink-0 rounded-lg bg-white/[0.04] border border-white/10 overflow-hidden relative transition-transform duration-300 group-hover:scale-105">
+                        <img
+                          src={plat.logo}
+                          alt={`${pw.platform_name} logo`}
+                          onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                          className="absolute inset-0 h-full w-full object-cover"
+                        />
+                      </div>
                     ) : (
                       <div className="h-11 w-11 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center font-black text-base text-emerald-400 shrink-0 transition-transform duration-300 group-hover:scale-105">
                         {pw.platform_name.charAt(0).toUpperCase()}

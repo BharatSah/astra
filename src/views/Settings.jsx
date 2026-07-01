@@ -308,28 +308,26 @@ function PlatformsSection({ platforms, loading, onOpenAdd, onDelete }) {
               const host = platform.url ? platform.url.replace(/^https?:\/\//, '').replace(/\/.*/, '') : null;
               return (
               <div key={platform.platform_name} className="group relative flex flex-col rounded-2xl border border-white/5 bg-gradient-to-b from-white/[0.04] to-white/[0.01] overflow-hidden transition-all duration-300 hover:border-emerald-500/25 hover:-translate-y-1 hover:shadow-xl hover:shadow-emerald-500/10">
-                {/* Top accent line */}
-                <span className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-emerald-500/0 via-emerald-400/70 to-emerald-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                <span className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-emerald-500/0 via-emerald-400/70 to-emerald-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10" />
 
-                {/* Logo header */}
-                <div className="relative flex items-center justify-center pt-6 pb-4">
-                  <div className="absolute inset-x-0 top-0 h-16 bg-[radial-gradient(ellipse_at_top,rgba(16,185,129,0.12),transparent_70%)] pointer-events-none" />
-                  {platform.logo ? (
-                    <img
-                      src={platform.logo}
-                      alt={`${platform.platform_name} logo`}
-                      onError={(event) => { event.currentTarget.style.display = 'none'; }}
-                      className="relative h-14 w-14 rounded-2xl object-contain bg-white/[0.04] p-2 border border-white/10 shadow-lg shadow-black/20 transition-transform duration-300 group-hover:scale-105"
-                    />
-                  ) : (
-                    <div className="relative h-14 w-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center font-black text-lg text-emerald-400 shadow-lg shadow-emerald-500/10 transition-transform duration-300 group-hover:scale-105">
+                <div className="flex justify-center py-3 px-2">
+                  <div className="relative aspect-square w-1/2 shrink-0 rounded-xl border border-white/10 bg-white/[0.04] shadow-inner overflow-hidden">
+                    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(16,185,129,0.08),transparent_72%)] pointer-events-none" />
+                    <div className="absolute inset-0 flex items-center justify-center font-black text-2xl text-emerald-400/80 select-none">
                       {platform.platform_name.charAt(0).toUpperCase()}
                     </div>
-                  )}
+                    {platform.logo ? (
+                      <img
+                        src={platform.logo}
+                        alt={`${platform.platform_name} logo`}
+                        onError={(event) => { event.currentTarget.style.display = 'none'; }}
+                        className="absolute inset-0 z-10 h-full w-full object-cover"
+                      />
+                    ) : null}
+                  </div>
                 </div>
 
-                {/* Body */}
-                <div className="px-4 pb-4 flex-1 flex flex-col">
+                <div className="px-3 pb-3 flex flex-col min-h-0 border-b border-white/5">
                   <h4 className="font-bold text-slate-100 text-sm text-center leading-tight line-clamp-2" title={platform.platform_name}>{platform.platform_name}</h4>
                   {host ? (
                     <a
@@ -347,7 +345,6 @@ function PlatformsSection({ platforms, loading, onOpenAdd, onDelete }) {
                   )}
                 </div>
 
-                {/* Footer actions */}
                 <div className="flex items-center justify-between px-3 py-2.5 border-t border-white/5 bg-dark-950/30">
                   {url ? (
                     <a
@@ -650,7 +647,7 @@ function PlatformModal({
             showUrlInput={showLogoUrlInput}
             onToggleUrlInput={onToggleLogoUrl}
             accent="emerald"
-            previewShape="rounded"
+            previewShape="square"
             uploadHint="Drag and drop logo, or click to browse"
             dropHint="Drop logo here!"
           />
@@ -738,15 +735,44 @@ function CloudinaryImageField({
     },
   };
   const tone = accentStyles[accent] || accentStyles.emerald;
-  const previewClass = previewShape === 'circle'
-    ? 'w-20 h-20 rounded-full object-cover'
-    : 'w-16 h-16 rounded-xl object-contain bg-white/5 p-1.5 border border-white/10';
+
+  const renderPreviewImage = () => {
+    if (previewShape === 'circle') {
+      return (
+        <img
+          src={value}
+          alt={`${label} preview`}
+          className="w-20 h-20 rounded-full object-cover mb-2"
+        />
+      );
+    }
+    if (previewShape === 'square') {
+      return (
+        <div className="aspect-square w-36 max-w-full mb-2 relative overflow-hidden rounded-xl bg-slate-950/60 border border-white/10 shadow-inner">
+          <img
+            src={value}
+            alt={`${label} preview`}
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+        </div>
+      );
+    }
+    return (
+      <div className="w-16 h-16 rounded-xl bg-white/[0.04] border border-white/10 mb-2 relative overflow-hidden">
+        <img
+          src={value}
+          alt={`${label} preview`}
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+      </div>
+    );
+  };
 
   return (
     <Field label={label}>
       {value ? (
         <div className={`flex flex-col items-center justify-center p-4 border border-dashed ${tone.previewBorder} rounded-xl relative group min-h-[120px]`}>
-          <img src={value} alt={`${label} preview`} className={`${previewClass} mb-2`} />
+          {renderPreviewImage()}
           <span className="text-xs text-slate-400 truncate max-w-xs px-2">
             {value.startsWith('data:') ? 'Uploaded custom image' : (isImageUrl(value) ? 'Image ready' : value)}
           </span>
