@@ -8,7 +8,7 @@ function DetailCell({ icon: Icon, label, children, className = '' }) {
         <Icon className="w-3 h-3 text-rose-400 shrink-0" />
         <span className="text-[9px] uppercase font-bold tracking-wider text-slate-500 truncate">{label}</span>
       </div>
-      <div className="text-xs sm:text-sm text-slate-200 min-w-0">{children}</div>
+      <div className="text-sm text-slate-200 min-w-0">{children}</div>
     </div>
   );
 }
@@ -54,7 +54,7 @@ function EmailPreview({ log, formatTime }) {
       </div>
 
       <div className="flex-1 min-h-0 bg-slate-950 p-4 overflow-y-auto overscroll-contain">
-        <div className="bg-white/[0.03] border border-white/5 rounded-xl p-4 sm:p-5 max-w-lg mx-auto shadow-inner">
+        <div className="bg-white/[0.03] border border-white/5 rounded-xl p-5 max-w-lg mx-auto shadow-inner">
           <p className="text-[10px] text-slate-500 mb-3">Dear {recipientName},</p>
           <div className="text-sm text-slate-200 leading-relaxed whitespace-pre-wrap break-words font-sans">
             {log.body || <span className="text-slate-500 italic">Empty message body</span>}
@@ -107,19 +107,19 @@ export default function EmailLogs({ emailLogs }) {
 
   return (
     <div className="animate-slide-up flex flex-col min-h-[calc(100vh-7rem)]">
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-5 sm:mb-6">
+      <div className="mb-6 flex flex-row items-end justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1.5">
             <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-rose-400/80 bg-rose-500/10 border border-rose-500/20 px-2 py-0.5 rounded-full">Email Logs</span>
           </div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-100">
+          <h1 className="text-2xl font-bold text-slate-100">
             Send History{' '}
-            <span className="text-slate-500 text-sm sm:text-base font-semibold">({emailLogs.length} total)</span>
+            <span className="text-slate-500 text-base font-semibold">({emailLogs.length} total)</span>
           </h1>
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-5 sm:mb-6">
+      <div className="flex flex-row gap-4 mb-6">
         <div className="relative flex-1 min-w-0">
           <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
             <Search className="w-4 h-4" />
@@ -132,7 +132,7 @@ export default function EmailLogs({ emailLogs }) {
             className="w-full pl-9 pr-4 py-2.5 rounded-xl text-slate-200 bg-slate-800/50 border border-slate-700/50 focus:border-brand-500/50 focus:bg-slate-800 transition-colors text-sm"
           />
         </div>
-        <div className="relative w-full sm:w-44 shrink-0">
+        <div className="relative w-44 shrink-0">
           <select className="w-full px-4 pr-8 py-2.5 rounded-xl text-slate-400 bg-slate-800/50 border border-slate-700/50 appearance-none text-sm focus:outline-none focus:border-brand-500/50">
             <option>All Time</option>
             <option>Last 24 Hours</option>
@@ -145,7 +145,7 @@ export default function EmailLogs({ emailLogs }) {
 
       <div className="glass-panel rounded-2xl border border-white/5 flex-1 overflow-hidden flex flex-col min-h-[280px]">
         {filteredLogs.length === 0 ? (
-          <div className="text-center py-16 sm:py-24 text-slate-500 flex flex-col items-center justify-center flex-1 px-4 space-y-4">
+          <div className="text-center py-24 text-slate-500 flex flex-col items-center justify-center flex-1 px-4 space-y-4">
             <Mail className="w-12 h-12 text-slate-600" />
             <div>
               <p className="text-sm font-semibold text-slate-400">No outgoing SMTP emails logged.</p>
@@ -154,16 +154,16 @@ export default function EmailLogs({ emailLogs }) {
           </div>
         ) : (
           <div className="overflow-x-auto flex-1 overscroll-x-contain">
-            <table className="w-full text-left border-collapse min-w-[640px] lg:min-w-[900px]">
-              <thead className="sticky top-0 bg-slate-900/95 backdrop-blur-sm border-b border-white/5 text-[10px] sm:text-[11px] uppercase font-bold tracking-wider text-slate-400 z-10">
+            <table className="w-full text-left border-collapse min-w-[960px]">
+              <thead className="sticky top-0 bg-slate-900/95 backdrop-blur-sm border-b border-white/5 text-[11px] uppercase font-bold tracking-wider text-slate-400 z-10">
                 <tr>
-                  <th className="p-3 sm:p-4 pl-4 sm:pl-6 whitespace-nowrap">Time</th>
-                  <th className="p-3 sm:p-4 hidden sm:table-cell">Customer</th>
-                  <th className="p-3 sm:p-4">Email</th>
-                  <th className="p-3 sm:p-4 hidden lg:table-cell">Product</th>
-                  <th className="p-3 sm:p-4 hidden xl:table-cell">Template</th>
-                  <th className="p-3 sm:p-4 text-center hidden md:table-cell">Type</th>
-                  <th className="p-3 sm:p-4 pr-4 sm:pr-6 text-center">Status</th>
+                  <th className="p-4 pl-6 whitespace-nowrap">Time</th>
+                  <th className="p-4">Customer</th>
+                  <th className="p-4">Email</th>
+                  <th className="p-4">Product</th>
+                  <th className="p-4">Template</th>
+                  <th className="p-4 text-center">Type</th>
+                  <th className="p-4 pr-6 text-center">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
@@ -173,25 +173,25 @@ export default function EmailLogs({ emailLogs }) {
                     onClick={() => handleRowClick(log)}
                     className="hover:bg-slate-800/40 transition-colors cursor-pointer"
                   >
-                    <td className="p-3 sm:p-4 pl-4 sm:pl-6 text-[11px] sm:text-xs text-slate-400 whitespace-nowrap">{formatTime(log.sent_at)}</td>
-                    <td className="p-3 sm:p-4 text-sm font-bold text-slate-200 hidden sm:table-cell">{recipientLabel(log)}</td>
-                    <td className="p-3 sm:p-4 text-[11px] sm:text-xs text-slate-400 max-w-[140px] sm:max-w-none truncate">{log.recipient || '—'}</td>
-                    <td className="p-3 sm:p-4 text-xs text-slate-400 max-w-[180px] truncate hidden lg:table-cell">{getProductFromLog(log)}</td>
-                    <td className="p-3 sm:p-4 text-xs text-slate-400 hidden xl:table-cell">{getTemplateFromLog(log)}</td>
-                    <td className="p-3 sm:p-4 text-center hidden md:table-cell">
+                    <td className="p-4 pl-6 text-xs text-slate-400 whitespace-nowrap">{formatTime(log.sent_at)}</td>
+                    <td className="p-4 text-sm font-bold text-slate-200">{recipientLabel(log)}</td>
+                    <td className="p-4 text-xs text-slate-400 max-w-[200px] truncate">{log.recipient || '—'}</td>
+                    <td className="p-4 text-xs text-slate-400 max-w-[220px] truncate">{getProductFromLog(log)}</td>
+                    <td className="p-4 text-xs text-slate-400">{getTemplateFromLog(log)}</td>
+                    <td className="p-4 text-center">
                       <span className="inline-flex px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-400 font-bold text-[10px] tracking-wide">
                         {formatLogType(log)}
                       </span>
                     </td>
-                    <td className="p-3 sm:p-4 pr-4 sm:pr-6 text-center">
+                    <td className="p-4 pr-6 text-center">
                       {log.status === 'failed' ? (
-                        <span className="inline-flex items-center gap-1 text-rose-400 font-semibold text-[10px] sm:text-xs border border-rose-500/20 px-1.5 sm:px-2 py-0.5 rounded-md" title={log.error || 'Send failed'}>
-                          <XCircle className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                        <span className="inline-flex items-center gap-1 text-rose-400 font-semibold text-xs border border-rose-500/20 px-2 py-0.5 rounded-md" title={log.error || 'Send failed'}>
+                          <XCircle className="w-3.5 h-3.5" />
                           failed
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 text-emerald-400 font-semibold text-[10px] sm:text-xs border border-emerald-500/20 px-1.5 sm:px-2 py-0.5 rounded-md">
-                          <CheckCircle2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                        <span className="inline-flex items-center gap-1 text-emerald-400 font-semibold text-xs border border-emerald-500/20 px-2 py-0.5 rounded-md">
+                          <CheckCircle2 className="w-3.5 h-3.5" />
                           sent
                         </span>
                       )}
@@ -205,24 +205,21 @@ export default function EmailLogs({ emailLogs }) {
       </div>
 
       {selectedLog && (
-        <div
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-dark-950/85 backdrop-blur-sm p-0 sm:p-4"
-          onClick={handleCloseModal}
-        >
+        <div className="modal-overlay bg-dark-950/85" onClick={handleCloseModal}>
           <div
-            className="glass-panel border border-white/10 rounded-t-2xl sm:rounded-2xl w-full sm:max-w-2xl shadow-2xl shadow-rose-500/5 flex flex-col max-h-[92dvh] sm:max-h-[min(88vh,680px)] overflow-hidden"
+            className="modal-panel max-w-2xl shadow-rose-500/5 max-h-[min(88vh,680px)]"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between gap-3 px-4 sm:px-5 py-4 border-b border-white/5 bg-white/[0.02] shrink-0">
+            <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-white/5 bg-white/[0.02] shrink-0">
               <div className="flex items-center gap-3 min-w-0">
-                <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-gradient-to-br from-rose-500 to-pink-600 flex items-center justify-center shadow-lg shadow-rose-500/20 shrink-0">
-                  <Mail className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-rose-500 to-pink-600 flex items-center justify-center shadow-lg shadow-rose-500/20 shrink-0">
+                  <Mail className="w-5 h-5 text-white" />
                 </div>
                 <div className="min-w-0">
-                  <h3 className="font-bold text-slate-100 text-sm sm:text-base truncate">
+                  <h3 className="font-bold text-slate-100 text-base truncate">
                     {showPreview ? 'Email Preview' : 'Email Log Details'}
                   </h3>
-                  <p className="text-[10px] sm:text-[11px] text-slate-500 truncate">
+                  <p className="text-[11px] text-slate-500 truncate">
                     {showPreview ? selectedLog.subject : 'Dispatch metadata'}
                   </p>
                 </div>
@@ -237,9 +234,9 @@ export default function EmailLogs({ emailLogs }) {
               </button>
             </div>
 
-            <div className="flex-1 min-h-0 overflow-hidden p-4 sm:p-5">
+            <div className="flex-1 min-h-0 overflow-hidden p-5">
               {!showPreview ? (
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5 h-full content-start overflow-hidden">
+                <div className="grid grid-cols-4 gap-2.5 h-full content-start overflow-hidden">
                   <DetailCell icon={Mail} label="Customer">{recipientLabel(selectedLog)}</DetailCell>
                   <DetailCell icon={Send} label="Email">
                     <span className="truncate block" title={selectedLog.recipient}>{selectedLog.recipient || '—'}</span>
@@ -256,7 +253,7 @@ export default function EmailLogs({ emailLogs }) {
                   <DetailCell icon={selectedLog.status === 'failed' ? XCircle : CheckCircle2} label="Status">
                     {selectedLog.status === 'failed' ? (
                       <div>
-                        <span className="inline-flex items-center gap-1 text-rose-400 font-semibold text-[10px] sm:text-xs border border-rose-500/20 px-1.5 py-0.5 rounded-md">
+                        <span className="inline-flex items-center gap-1 text-rose-400 font-semibold text-xs border border-rose-500/20 px-1.5 py-0.5 rounded-md">
                           failed
                         </span>
                         {selectedLog.error && (
@@ -264,14 +261,14 @@ export default function EmailLogs({ emailLogs }) {
                         )}
                       </div>
                     ) : (
-                      <span className="inline-flex items-center gap-1 text-emerald-400 font-semibold text-[10px] sm:text-xs border border-emerald-500/20 px-1.5 py-0.5 rounded-md">
+                      <span className="inline-flex items-center gap-1 text-emerald-400 font-semibold text-xs border border-emerald-500/20 px-1.5 py-0.5 rounded-md">
                         sent
                       </span>
                     )}
                   </DetailCell>
                   <DetailCell icon={Server} label="Triggered By">System</DetailCell>
                   <DetailCell icon={Clock} label="Time">
-                    <span className="text-[11px] sm:text-xs leading-tight">{formatTime(selectedLog.sent_at)}</span>
+                    <span className="text-xs leading-tight">{formatTime(selectedLog.sent_at)}</span>
                   </DetailCell>
                 </div>
               ) : (
@@ -279,18 +276,18 @@ export default function EmailLogs({ emailLogs }) {
               )}
             </div>
 
-            <div className="px-4 sm:px-5 py-4 border-t border-white/5 bg-white/[0.02] flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 shrink-0">
+            <div className="px-5 py-4 border-t border-white/5 bg-white/[0.02] flex flex-row items-center justify-between gap-3 shrink-0">
               <button
                 type="button"
                 onClick={handleCloseModal}
-                className="w-full sm:w-auto px-5 py-2.5 text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 rounded-xl transition text-sm font-semibold border border-white/10"
+                className="px-5 py-2.5 text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 rounded-xl transition text-sm font-semibold border border-white/10"
               >
                 Close
               </button>
               <button
                 type="button"
                 onClick={() => setShowPreview(!showPreview)}
-                className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-400 hover:to-pink-500 rounded-xl text-white font-semibold text-sm transition shadow-lg shadow-rose-500/20"
+                className="flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-400 hover:to-pink-500 rounded-xl text-white font-semibold text-sm transition shadow-lg shadow-rose-500/20"
               >
                 <Eye className="w-4 h-4" />
                 {showPreview ? 'Back to Details' : 'Preview Email'}

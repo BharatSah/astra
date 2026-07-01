@@ -88,21 +88,20 @@ export default function ExpiryManagement({ onNotify, onTriggerEmail, onTabChange
     <div className="animate-slide-up flex flex-col" style={{ minHeight: 'calc(100vh - 7rem)' }}>
 
       {/* Header */}
-      <div className="mb-6 flex flex-col sm:flex-row sm:items-end justify-between gap-3">
+      <div className="mb-6 flex flex-row items-end justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1.5">
             <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-400/80 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">Expiry Control</span>
           </div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-100">
-            Expiry Control <span className="text-slate-500 text-sm sm:text-base font-semibold">({filteredCustomers.length} total)</span>
+          <h1 className="text-2xl font-bold text-slate-100">
+            Expiry Control <span className="text-slate-500 text-base font-semibold">({filteredCustomers.length} total)</span>
           </h1>
         </div>
       </div>
 
-      {/* Compact top bar: Search + Filter left, Add Button right */}
-      <div className="flex flex-col sm:flex-row gap-3 items-center justify-between mb-4">
-        <div className="flex gap-3 items-center w-full sm:w-auto">
-          <div className="relative w-full sm:w-72">
+      <div className="page-toolbar">
+        <div className="flex gap-4 items-center">
+          <div className="relative w-72">
             <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-500" />
             <input
               type="text"
@@ -125,7 +124,7 @@ export default function ExpiryManagement({ onNotify, onTriggerEmail, onTabChange
         </div>
         <button
           onClick={handleOpenForm}
-          className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 rounded-xl text-white font-bold text-sm shadow-lg shadow-amber-500/20 transition duration-200 shrink-0 sm:w-auto w-full justify-center shimmer-btn"
+          className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 rounded-xl text-white font-bold text-sm shadow-lg shadow-amber-500/20 transition duration-200 shrink-0 justify-center shimmer-btn"
         >
           <UserPlus className="w-4 h-4" />
           Add Customer
@@ -245,8 +244,8 @@ export default function ExpiryManagement({ onNotify, onTriggerEmail, onTabChange
 
       {/* Modal Form Overlay */}
       {isFormOpen && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-md p-0 sm:p-4 animate-slide-up">
-          <div className="w-full max-w-2xl glass-panel border border-white/10 rounded-t-2xl sm:rounded-2xl shadow-2xl shadow-amber-500/5 flex flex-col max-h-[92dvh] sm:max-h-[90vh] overflow-hidden">
+        <div className="modal-overlay">
+          <div className="modal-panel max-w-2xl shadow-amber-500/5">
 
             <div className="flex items-center justify-between gap-4 px-6 py-5 border-b border-white/5">
               <div className="flex items-center gap-3">
@@ -263,7 +262,7 @@ export default function ExpiryManagement({ onNotify, onTriggerEmail, onTabChange
               </button>
             </div>
 
-            <div className="p-4 sm:p-6 overflow-y-auto overscroll-contain flex-1 min-h-0">
+            <div className="p-6 overflow-y-auto overscroll-contain flex-1 min-h-0">
               {services.length === 0 ? (
                 <div className="py-12 text-center text-sm text-slate-400 space-y-4">
                   <div className="h-14 w-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mx-auto text-slate-600">
@@ -324,9 +323,9 @@ export default function ExpiryManagement({ onNotify, onTriggerEmail, onTabChange
                     <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Any extra details about this client or contract..." rows="3" className="w-full px-4 py-3 rounded-xl text-slate-200 glass-input text-sm font-sans leading-relaxed resize-none transition-all duration-200 focus:scale-[1.01]" />
                   </div>
 
-                  <div className="pt-2 flex flex-col-reverse sm:flex-row justify-end gap-3 text-sm">
-                    <button type="button" onClick={handleCloseForm} className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white border border-white/10 transition-all duration-200 font-semibold cursor-pointer">Cancel</button>
-                    <button type="submit" className="w-full sm:w-auto px-6 py-2.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 rounded-xl text-white font-bold transition-all duration-200 shadow-lg shadow-amber-500/10 shimmer-btn cursor-pointer">
+                  <div className="pt-2 flex flex-row justify-end gap-3 text-sm">
+                    <button type="button" onClick={handleCloseForm} className="px-5 py-2.5 rounded-xl bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white border border-white/10 transition-all duration-200 font-semibold cursor-pointer">Cancel</button>
+                    <button type="submit" className="px-6 py-2.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 rounded-xl text-white font-bold transition-all duration-200 shadow-lg shadow-amber-500/10 shimmer-btn cursor-pointer">
                       {editingId ? 'Update Customer Rule' : 'Save Customer'}
                     </button>
                   </div>

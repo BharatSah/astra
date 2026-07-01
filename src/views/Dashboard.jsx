@@ -44,10 +44,10 @@ export default function Dashboard({ onTabChange }) {
     <div className="animate-slide-up flex flex-col min-h-[calc(100vh-12rem)] gap-6">
 
       {/* Hero Header */}
-      <div className="relative overflow-hidden p-6 md:p-8 glass-panel rounded-3xl border border-white/5">
+      <div className="relative overflow-hidden p-8 glass-panel rounded-3xl border border-white/5">
         <div className="absolute top-0 right-0 w-72 h-72 bg-amber-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none" />
         <div className="absolute bottom-0 left-0 w-56 h-56 bg-rose-500/8 rounded-full blur-3xl translate-y-1/3 -translate-x-1/4 pointer-events-none" />
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="relative z-10 flex flex-row items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 mb-2">
               <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-400/80 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">Control Center</span>
@@ -75,10 +75,10 @@ export default function Dashboard({ onTabChange }) {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      <div className="grid grid-cols-4 gap-5">
         {kpiCards.map((card) => {
           const Icon = card.icon;
-          const a = accentMap[card.color] || accentMap.slate;
+          const a = accentMap[card.accent] || accentMap.slate;
           const valueColor = card.pulse ? 'text-amber-400 animate-pulse' : 'text-white';
           return (
             <button
@@ -103,7 +103,7 @@ export default function Dashboard({ onTabChange }) {
       </div>
 
       {/* Quick Action Strip */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-4 gap-3">
         {[
           { label: 'Email & SMTP', icon: Mail, tab: 'smtp', accent: 'text-violet-400', border: 'hover:border-violet-500/30' },
           { label: 'Expiry Control', icon: CalendarClock, tab: 'expiry', accent: 'text-amber-400', border: 'hover:border-amber-500/30' },
@@ -125,10 +125,10 @@ export default function Dashboard({ onTabChange }) {
       </div>
 
       {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1">
+      <div className="grid grid-cols-3 gap-6 flex-1">
 
         {/* Expiries Panel */}
-        <div className="lg:col-span-2 glass-panel p-5 rounded-2xl border border-white/5 flex flex-col transition-all duration-300 hover:border-white/10">
+        <div className="col-span-2 glass-panel p-5 rounded-2xl border border-white/5 flex flex-col transition-all duration-300 hover:border-white/10">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-bold text-base text-slate-200 flex items-center gap-2">
               <Calendar className="w-4 h-4 text-amber-400" />

@@ -27,8 +27,7 @@ import {
   Laptop,
   User,
   Eye,
-  EyeOff,
-  Menu
+  EyeOff
 } from 'lucide-react';
 
 // Per-feature accent mapping drives the active-nav indicator color so each
@@ -64,7 +63,6 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [activeSettingsTab, setActiveSettingsTab] = useState('services');
   const [isSettingsExpanded, setIsSettingsExpanded] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth >= 1024);
 
   const emailsSentToday = emailLogs.filter(log => {
     const logDate = new Date(log.sent_at).toDateString();
@@ -149,38 +147,15 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen flex relative">
-      {/* Mobile backdrop: tap to close sidebar */}
-      {isSidebarOpen && (
-        <div
-          className="lg:hidden fixed inset-0 z-30 bg-black/60 backdrop-blur-sm"
-          onClick={() => setIsSidebarOpen(false)}
-        />
-      )}
-      {/* Sidebar Navigation */}
-      <aside
-        className={`fixed inset-y-0 left-0 z-40 w-64 bg-dark-950/80 backdrop-blur-xl pt-6 px-6 pb-0 flex flex-col transform transition-transform duration-300 ${
-          isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        } lg:translate-x-0 lg:static lg:sticky lg:top-0 lg:h-screen border-r border-white/5`}
-      >
+    <div className="min-h-screen flex">
+      <aside className="sticky top-0 h-screen w-64 shrink-0 bg-dark-950/80 backdrop-blur-xl pt-6 px-6 pb-0 flex flex-col border-r border-white/5">
         <div className="space-y-8 flex-1 min-h-0 overflow-y-auto">
           {/* Logo / Branding */}
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-3">
-              <AstraLogo className="h-9 w-9" />
-              <div>
-                <span className="text-lg font-black tracking-wider uppercase bg-clip-text text-transparent bg-gradient-to-r from-amber-200 via-amber-400 to-orange-500">
-                  Astra
-                </span>
-              </div>
-            </div>
-            <button
-              onClick={() => setIsSidebarOpen(false)}
-              className="p-1.5 text-slate-400 hover:text-white rounded-xl hover:bg-white/5 lg:hidden"
-              title="Close Menu"
-            >
-              <X className="w-4 h-4" />
-            </button>
+          <div className="flex items-center gap-3">
+            <AstraLogo className="h-9 w-9" />
+            <span className="text-lg font-black tracking-wider uppercase bg-clip-text text-transparent bg-gradient-to-r from-amber-200 via-amber-400 to-orange-500">
+              Astra
+            </span>
           </div>
 
           {/* Navigation Links */}
@@ -237,7 +212,6 @@ export default function App() {
                                 onClick={() => {
                                   setActiveTab('settings');
                                   setActiveSettingsTab(sub.id);
-                                  if (window.innerWidth < 1024) setIsSidebarOpen(false);
                                 }}
                                 style={{ animationDelay: `${idx * 50}ms` }}
                                 className={`group/sub sub-fade-in relative w-full flex items-center gap-2.5 py-2 pr-3 pl-5 rounded-lg text-xs font-semibold transition-all duration-200 ${
@@ -266,10 +240,7 @@ export default function App() {
               return (
                 <button
                   key={item.id}
-                  onClick={() => {
-                    setActiveTab(item.id);
-                    if (window.innerWidth < 1024) setIsSidebarOpen(false);
-                  }}
+                  onClick={() => setActiveTab(item.id)}
                   className={`group w-full flex items-center gap-3.5 px-4 py-3.5 rounded-xl text-sm font-semibold transition-all duration-200 relative overflow-hidden ${
                     isActive
                       ? `bg-gradient-to-r ${accent.grad} text-white border ${accent.border}`
@@ -347,24 +318,8 @@ export default function App() {
       </aside>
 
       {/* Main Panel layout container */}
-      <div className="flex-1 flex flex-col min-h-screen overflow-hidden bg-dark-950">
-        {/* Mobile sidebar toggle */}
-        <div className="lg:hidden sticky top-0 z-30 flex items-center gap-3 px-4 py-3 bg-dark-950/90 backdrop-blur-xl border-b border-white/5">
-          <button
-            onClick={() => setIsSidebarOpen(true)}
-            className="p-2 text-slate-300 hover:text-white rounded-xl hover:bg-white/5 transition cursor-pointer"
-            title="Open Menu"
-          >
-            <Menu className="w-5 h-5" />
-          </button>
-          <div className="flex items-center gap-2">
-            <AstraLogo className="h-7 w-7" />
-            <span className="text-sm font-black tracking-wider uppercase bg-clip-text text-transparent bg-gradient-to-r from-amber-200 via-amber-400 to-orange-500">Astra</span>
-          </div>
-        </div>
-
-        {/* Dynamic page content scroll wrapper */}
-        <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 md:p-8 max-w-7xl w-full mx-auto pb-20 sm:pb-16">
+      <div className="flex-1 flex flex-col min-h-screen min-w-0 overflow-hidden bg-dark-950">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden p-8 w-full max-w-[1600px] mx-auto pb-12">
           {isFallbackMode && (
             <div className="mb-6 p-3 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-xl text-xs flex items-center gap-2.5 animate-slide-up">
               <span className="h-2 w-2 rounded-full bg-amber-400 animate-pulse"></span>
@@ -377,11 +332,11 @@ export default function App() {
       </div>
 
       {/* Global Notifications system toasts wrapper */}
-      <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 sm:bottom-6 z-50 space-y-2 sm:space-y-3 max-w-sm sm:w-full pointer-events-none">
+      <div className="fixed bottom-6 right-6 z-50 space-y-3 w-full max-w-sm pointer-events-none">
         {notifications.map((notif) => (
           <div
             key={notif.id}
-            className={`pointer-events-auto p-3 sm:p-4 rounded-xl border shadow-xl flex justify-between items-start gap-2 animate-slide-up backdrop-blur-xl ${
+            className={`pointer-events-auto p-4 rounded-xl border shadow-xl flex justify-between items-start gap-2 animate-slide-up backdrop-blur-xl ${
               notif.type === 'success'
                 ? 'bg-emerald-950/80 border-emerald-500/20 text-emerald-300'
                 : notif.type === 'error'

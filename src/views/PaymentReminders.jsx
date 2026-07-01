@@ -73,9 +73,8 @@ export default function PaymentReminders({ onNotify, onTriggerEmail, onTabChange
         </h1>
       </div>
 
-      {/* Compact Top Bar */}
-      <div className="flex flex-col sm:flex-row gap-3 items-center justify-between mb-4">
-        <div className="flex items-center gap-3 w-full sm:w-auto">
+      <div className="page-toolbar">
+        <div className="flex items-center gap-4">
           <div className="bg-white/[0.03] border border-white/5 rounded-xl p-1 flex shrink-0">
             <button onClick={() => setActiveTab('active')} className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${activeTab === 'active' ? 'bg-sky-500 text-white shadow-sm shadow-sky-500/30' : 'text-slate-400 hover:text-slate-200'}`}>
               Active Receivables
@@ -85,7 +84,7 @@ export default function PaymentReminders({ onNotify, onTriggerEmail, onTabChange
             </button>
           </div>
         </div>
-        <button onClick={handleOpenAddModal} className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-sky-500 to-cyan-600 hover:from-sky-400 hover:to-cyan-500 rounded-xl text-white font-bold text-sm shadow-lg shadow-sky-500/20 transition duration-200 shrink-0 sm:w-auto w-full justify-center shimmer-btn">
+        <button onClick={handleOpenAddModal} className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-sky-500 to-cyan-600 hover:from-sky-400 hover:to-cyan-500 rounded-xl text-white font-bold text-sm shadow-lg shadow-sky-500/20 transition duration-200 shrink-0 justify-center shimmer-btn">
           <Plus className="w-4 h-4" />
           Add Reminder
         </button>
@@ -191,8 +190,8 @@ export default function PaymentReminders({ onNotify, onTriggerEmail, onTabChange
 
       {/* Add / Edit Reminder Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-md p-0 sm:p-4 animate-slide-up">
-          <div className="w-full max-w-2xl glass-panel border border-white/10 rounded-t-2xl sm:rounded-2xl shadow-2xl shadow-sky-500/5 flex flex-col max-h-[92dvh] sm:max-h-[90vh] overflow-hidden">
+        <div className="modal-overlay">
+          <div className="modal-panel max-w-2xl shadow-sky-500/5">
 
             <div className="flex items-center justify-between gap-4 px-6 py-5 border-b border-white/5">
               <div className="flex items-center gap-3">
@@ -209,7 +208,7 @@ export default function PaymentReminders({ onNotify, onTriggerEmail, onTabChange
               </button>
             </div>
 
-            <div className="p-4 sm:p-6 overflow-y-auto overscroll-contain flex-1 min-h-0">
+            <div className="p-6 overflow-y-auto overscroll-contain flex-1 min-h-0">
               {services.length === 0 ? (
                 <div className="py-12 text-center text-sm text-slate-400 space-y-4">
                   <div className="h-14 w-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mx-auto text-slate-600">
@@ -290,9 +289,9 @@ export default function PaymentReminders({ onNotify, onTriggerEmail, onTabChange
                     <p className="mt-1.5 text-[11px] text-slate-500">Pending/overdue status is recalculated automatically based on the due date.</p>
                   </div>
 
-                  <div className="pt-2 flex flex-col-reverse sm:flex-row justify-end gap-3 text-sm">
-                    <button type="button" onClick={() => setIsModalOpen(false)} className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white border border-white/10 transition-all duration-200 font-semibold cursor-pointer">Cancel</button>
-                    <button type="submit" className="w-full sm:w-auto px-6 py-2.5 bg-gradient-to-r from-sky-500 to-cyan-600 hover:from-sky-400 hover:to-cyan-500 rounded-xl text-white font-bold transition-all duration-200 shadow-lg shadow-sky-500/10 shimmer-btn cursor-pointer">
+                  <div className="pt-2 flex flex-row justify-end gap-3 text-sm">
+                    <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2.5 rounded-xl bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white border border-white/10 transition-all duration-200 font-semibold cursor-pointer">Cancel</button>
+                    <button type="submit" className="px-6 py-2.5 bg-gradient-to-r from-sky-500 to-cyan-600 hover:from-sky-400 hover:to-cyan-500 rounded-xl text-white font-bold transition-all duration-200 shadow-lg shadow-sky-500/10 shimmer-btn cursor-pointer">
                       {editingId ? 'Update Reminder' : 'Save Reminder'}
                     </button>
                   </div>

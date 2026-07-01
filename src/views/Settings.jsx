@@ -209,7 +209,7 @@ function ServicesSection({ services, loading, onOpenAdd, onDelete }) {
   return (
     <div className="flex-1 flex flex-col h-full space-y-4">
       <div className="glass-panel p-6 rounded-2xl border border-white/5 flex-1 flex flex-col min-h-[calc(100vh-12rem)]">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div className="flex flex-row items-center justify-between gap-4 mb-6">
           <h2 className="text-xl font-bold flex items-center gap-2">
             <Server className="w-5 h-5 text-amber-400" />
             Service Directory
@@ -255,7 +255,7 @@ function PlatformsSection({ platforms, loading, onOpenAdd, onDelete }) {
   return (
     <div className="flex-1 flex flex-col h-full space-y-4">
       <div className="glass-panel p-6 rounded-2xl border border-white/5 flex-1 flex flex-col min-h-[calc(100vh-12rem)]">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div className="flex flex-row items-center justify-between gap-4 mb-6">
           <h2 className="text-xl font-bold flex items-center gap-2">
             <Laptop className="w-5 h-5 text-emerald-400" />
             Registered Platforms
@@ -274,7 +274,7 @@ function PlatformsSection({ platforms, loading, onOpenAdd, onDelete }) {
         ) : platforms.length === 0 ? (
           <EmptyState icon={Laptop} text="No platforms registered. Add your first platform to link credentials." />
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 flex-1 overflow-y-auto pr-2 pb-4 content-start">
+          <div className="grid grid-cols-4 gap-4 flex-1 overflow-y-auto pr-2 pb-4 content-start">
             {platforms.map(platform => {
               const url = platform.url ? (platform.url.startsWith('http') ? platform.url : `https://${platform.url}`) : null;
               const host = platform.url ? platform.url.replace(/^https?:\/\//, '').replace(/\/.*/, '') : null;

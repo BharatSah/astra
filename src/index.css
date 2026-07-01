@@ -150,7 +150,25 @@
   100% { transform: translateX(100%); }
 }
 
+@utility modal-overlay {
+  @apply fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-6 animate-slide-up;
+}
+
+@utility modal-panel {
+  @apply w-full glass-panel border border-white/10 rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden;
+}
+
+@utility page-toolbar {
+  @apply flex flex-row items-center justify-between gap-4 mb-4;
+}
+
 @layer base {
+  html,
+  body,
+  #root {
+    min-width: 1024px;
+  }
+
   body {
     @apply bg-dark-950 text-slate-100 font-sans antialiased overflow-x-hidden;
     background-image:

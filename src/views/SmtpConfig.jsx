@@ -148,16 +148,16 @@ export default function SmtpConfig({ onNotify }) {
   const currentTemplate = templates[selectedTemplateKey] || {};
 
   return (
-    <div className="animate-slide-up flex flex-col min-h-[calc(100vh-7rem)] gap-5 sm:gap-6">
+    <div className="animate-slide-up flex flex-col min-h-[calc(100vh-7rem)] gap-6">
 
       {/* Header */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 p-6 glass-panel rounded-2xl border border-slate-850 flex flex-col justify-center">
+      <div className="grid grid-cols-3 gap-6">
+        <div className="col-span-2 p-6 glass-panel rounded-2xl border border-slate-850 flex flex-col justify-center">
           <div className="flex items-center gap-3 mb-2">
             <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-brand-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-brand-500/20">
               <Send className="w-5 h-5 text-white" />
             </div>
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white">Email & SMTP Settings</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-white">Email & SMTP Settings</h1>
           </div>
           <p className="text-sm text-slate-400 max-w-2xl">
             Configure secure mail delivery, define routing policies, and design notification templates that reach the right inbox at the right time.
@@ -181,7 +181,7 @@ export default function SmtpConfig({ onNotify }) {
       </div>
 
       {/* Tab Bar */}
-      <div className="flex items-center gap-1.5 sm:gap-2 p-1 bg-slate-900/60 rounded-xl border border-slate-850 w-full max-w-full overflow-x-auto overscroll-x-contain">
+      <div className="flex items-center gap-2 p-1 bg-slate-900/60 rounded-xl border border-slate-850 w-full">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const selected = activeSubTab === tab.id;
@@ -189,7 +189,7 @@ export default function SmtpConfig({ onNotify }) {
             <button
               key={tab.id}
               onClick={() => handleTabChange(tab.id)}
-              className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all duration-200 cursor-pointer whitespace-nowrap shrink-0 ${selected ? 'bg-brand-600 text-white shadow-md shadow-brand-500/20' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'}`}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 cursor-pointer whitespace-nowrap shrink-0 ${selected ? 'bg-brand-600 text-white shadow-md shadow-brand-500/20' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'}`}
             >
               <Icon className="w-4 h-4" />
               {tab.label}
