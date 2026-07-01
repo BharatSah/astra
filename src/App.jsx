@@ -1,5 +1,5 @@
 ﻿import { useState } from 'react';
-import { isFallbackMode } from './models/dbClient.js';
+import { isSupabaseConfigured } from './models/dbClient.js';
 import { isImageUrl } from './services/cloudinaryService.js';
 import { useAuth } from './controllers/useAuth.js';
 import { useNotifications } from './controllers/useNotifications.js';
@@ -57,7 +57,7 @@ export default function App() {
     changePassword
   } = useAuth(notify);
 
-  const sessionReady = isLoggedIn || isFallbackMode;
+  const sessionReady = isLoggedIn;
   const { triggerEmail, emailLogs } = useEmailDispatch(notify, sessionReady);
 
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -127,7 +127,11 @@ export default function App() {
     { id: 'settings', label: 'System Settings', icon: SettingsIcon }
   ];
 
-  if (authLoading && !isFallbackMode) {
+  if (!isSupabaseConfigured) {
+    return <SupabaseRequired />;
+  }
+
+  if (authLoading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-dark-950 gap-4">
         <div className="h-10 w-10 rounded-full border-2 border-amber-500/30 border-t-amber-400 animate-spin" />
@@ -320,13 +324,6 @@ export default function App() {
       {/* Main Panel layout container */}
       <div className="flex-1 flex flex-col min-h-screen min-w-0 overflow-hidden bg-dark-950">
         <main className="flex-1 overflow-y-auto overflow-x-hidden p-8 w-full max-w-[1600px] mx-auto pb-12">
-          {isFallbackMode && (
-            <div className="mb-6 p-3 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-xl text-xs flex items-center gap-2.5 animate-slide-up">
-              <span className="h-2 w-2 rounded-full bg-amber-400 animate-pulse"></span>
-              <span>Running in Sandbox Mode (localStorage). Connect your Supabase credentials in settings to persist data to the cloud.</span>
-            </div>
-          )}
-
           {renderActiveComponent()}
         </main>
       </div>
@@ -355,6 +352,21 @@ export default function App() {
         ))}
       </div>
 
+    </div>
+  );
+}
+
+function SupabaseRequired() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-dark-950 px-8">
+      <div className="max-w-lg w-full glass-panel p-8 rounded-3xl border border-white/10 text-center space-y-4">
+        <AstraLogo className="h-12 w-12 mx-auto" />
+        <h1 className="text-xl font-bold text-white">Supabase connection required</h1>
+        <p className="text-sm text-slate-400 leading-relaxed">
+          Astra runs entirely on Supabase. Add <code className="text-amber-400">VITE_SUPABASE_URL</code> and{' '}
+          <code className="text-amber-400">VITE_SUPABASE_ANON_KEY</code> to your <code className="text-slate-300">.env</code> file, then restart the dev server.
+        </p>
+      </div>
     </div>
   );
 }

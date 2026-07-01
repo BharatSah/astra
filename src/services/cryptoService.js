@@ -3,10 +3,8 @@
  *
  * Scope and limitations (read before relying on this):
  * The encryption key is derived in the browser from a passphrase the user enters
- * at vault unlock time. This protects credentials at rest in localStorage when the
- * app is running in fallback/sandbox mode, and avoids storing plaintext passwords
- * in the database. It is NOT a substitute for server-side access control (RLS/Auth):
- * if the app is connected to Supabase, rely on Supabase RLS policies as the primary
+ * at vault unlock time. This protects credentials at rest in Supabase and avoids
+ * storing plaintext passwords in the database. Supabase RLS and Auth are the primary
  * control and treat this as defense-in-depth.
  *
  * Key derivation: PBKDF2 (SHA-256, 250k iterations) -> AES-GCM 256-bit.

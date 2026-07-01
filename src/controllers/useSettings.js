@@ -5,7 +5,7 @@ import { uploadToCloudinary } from '../services/cloudinaryService.js';
 
 // Controller: system settings (service catalog + platform registry + profile
 // avatar upload). Owns CRUD for services/platforms and Cloudinary image uploads.
-export function useSettings({ notify, updateUser }) {
+export function useSettings({ notify }) {
   const [services, setServices] = useState([]);
   const [platforms, setPlatforms] = useState([]);
   const [loadingServices, setLoadingServices] = useState(false);
@@ -123,27 +123,26 @@ export function useSettings({ notify, updateUser }) {
 
   const uploadProfileImage = useCallback(async (file) => {
     if (!file || !file.type.startsWith('image/')) {
-      notify('error', 'Only image files (PNG, JPG, etc.) are supported.');
-      return false;
+      notify('error', 'Only image files (PNG, JPG, SVG, etc.) are supported.');
+      return null;
     }
     if (file.size > 2 * 1024 * 1024) {
       notify('error', 'File size exceeds 2MB limit.');
-      return false;
+      return null;
     }
     setIsUploadingProfile(true);
     try {
       const url = await uploadToCloudinary(file);
-      updateUser({ avatar: url });
       notify('success', 'Profile image uploaded to Cloudinary successfully');
-      return true;
+      return url;
     } catch (err) {
       console.error('Cloudinary upload error:', err.message);
       notify('error', err.message || 'Failed to upload profile image.');
-      return false;
+      return null;
     } finally {
       setIsUploadingProfile(false);
     }
-  }, [notify, updateUser]);
+  }, [notify]);
 
   return {
     services, platforms, loadingServices, loadingPlatforms, isUploadingLogo, isUploadingProfile,

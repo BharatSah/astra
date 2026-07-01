@@ -13,10 +13,9 @@
  *    credential with a fixed salt and hash the resulting assertion signature with
  *    SHA-256 to produce a deterministic key.
  *
- * The wrapped vault passphrase is stored either in localStorage (fallback mode)
- * or in Supabase auth user_metadata (cloud mode). The actual vault encryption key
- * (AES-GCM key derived from the passphrase) never leaves the browser, and the
- * passphrase is only held in memory while the vault is unlocked.
+ * The wrapped vault passphrase is stored in Supabase auth user_metadata.
+ * The vault encryption key (AES-GCM key derived from the passphrase) never leaves
+ * the browser, and the passphrase is only held in memory while the vault is unlocked.
  */
 
 import {
@@ -209,11 +208,6 @@ export async function clearRegisteredPasskey() {
   await clearStoredPasskey();
 }
 
-export function getStoredCredentialId() {
-  // Kept for sync callers that cannot await; prefer loadStoredCredential.
-  if (typeof window === 'undefined') return null;
-  return localStorage.getItem('astra_passkey_credential_id') || null;
-}
 
 export async function wrapVaultPassphrase(passphrase, passkeyKey) {
   const iv = crypto.getRandomValues(new Uint8Array(12));

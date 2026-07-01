@@ -1,6 +1,6 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { useSettings } from '../controllers/useSettings.js';
-import { supabase, isFallbackMode } from '../models/dbClient.js';
+import { supabase } from '../models/dbClient.js';
 import { isImageUrl } from '../services/cloudinaryService.js';
 import {
   Globe,
@@ -43,7 +43,7 @@ export default function Settings({
     removePlatform,
     uploadLogo,
     uploadProfileImage
-  } = useSettings({ notify: onNotify, updateUser: setCurrentUser });
+  } = useSettings({ notify: onNotify });
 
   const [newServiceName, setNewServiceName] = useState('');
   const [newServiceDesc, setNewServiceDesc] = useState('');
@@ -57,7 +57,23 @@ export default function Settings({
   const [isDraggingLogo, setIsDraggingLogo] = useState(false);
   const logoInputRef = useRef(null);
 
-  const profileInputRef = useRef(null);
+  const persistProfileAvatar = async (url) => {
+    const avatarValue = (url || '').trim();
+    const fallback = (currentUser?.username || 'U').charAt(0).toUpperCase();
+    const { error } = await supabase.auth.updateUser({
+      data: {
+        avatar_url: avatarValue || null,
+        avatar: avatarValue || null,
+      },
+    });
+    if (error) {
+      onNotify('error', error.message || 'Failed to save profile image.');
+      return false;
+    }
+    await syncUserFromSession?.();
+    setCurrentUser(prev => ({ ...prev, avatar: avatarValue || fallback }));
+    return true;
+  };
 
   const handleAddService = async (event) => {
     event.preventDefault();
@@ -92,31 +108,42 @@ export default function Settings({
 
   const handleProfileFiles = async (files) => {
     if (!files || files.length === 0) return;
-    await uploadProfileImage(files[0]);
+    const url = await uploadProfileImage(files[0]);
+    if (url) await persistProfileAvatar(url);
+  };
+
+  const handleProfileImageChange = async (value) => {
+    if (!value) {
+      await persistProfileAvatar('');
+      return;
+    }
+    if (isImageUrl(value)) {
+      await persistProfileAvatar(value);
+    }
   };
 
   const saveProfile = async ({ username, email }) => {
     const nextUser = {
-      username: username.trim() || currentUser?.username || 'bharat.shah',
-      email: email.trim() || currentUser?.email || 'bharat.shah@mithilacoders.com',
+      username: username.trim() || currentUser?.username || '',
+      email: email.trim() || currentUser?.email || '',
       role: currentUser?.role || 'Administrator',
-      avatar: currentUser?.avatar || 'B'
+      avatar: currentUser?.avatar || '?',
     };
 
-    if (!isFallbackMode) {
-      const { error } = await supabase.auth.updateUser({
-        data: {
-          username: nextUser.username,
-          name: nextUser.username
-        },
-        email: nextUser.email
-      });
-      if (error) {
-        onNotify('error', error.message || 'Failed to update profile.');
-        return;
-      }
-      await syncUserFromSession?.();
+    const { error } = await supabase.auth.updateUser({
+      data: {
+        username: nextUser.username,
+        name: nextUser.username,
+        avatar_url: isImageUrl(nextUser.avatar) ? nextUser.avatar : null,
+        avatar: isImageUrl(nextUser.avatar) ? nextUser.avatar : null,
+      },
+      email: nextUser.email,
+    });
+    if (error) {
+      onNotify('error', error.message || 'Failed to update profile.');
+      return;
     }
+    await syncUserFromSession?.();
 
     setCurrentUser(nextUser);
     onNotify('success', 'Profile updated successfully.');
@@ -160,7 +187,8 @@ export default function Settings({
         <ProfileSection
           currentUser={currentUser}
           onLogout={onLogout}
-          profileInputRef={profileInputRef}
+          profileImage={isImageUrl(currentUser?.avatar) ? currentUser.avatar : ''}
+          onProfileImageChange={handleProfileImageChange}
           onProfileFiles={handleProfileFiles}
           isUploadingProfile={isUploadingProfile}
           onSave={saveProfile}
@@ -355,7 +383,8 @@ function PlatformsSection({ platforms, loading, onOpenAdd, onDelete }) {
 function ProfileSection({
   currentUser,
   onLogout,
-  profileInputRef,
+  profileImage,
+  onProfileImageChange,
   onProfileFiles,
   isUploadingProfile,
   onSave,
@@ -364,16 +393,30 @@ function ProfileSection({
   onChangePassword,
   onNotify
 }) {
-  const [showUpload, setShowUpload] = useState(false);
-  const [isDragging, setIsDragging] = useState(false);
+  const [showAvatarUrlInput, setShowAvatarUrlInput] = useState(false);
+  const [isDraggingProfile, setIsDraggingProfile] = useState(false);
+  const [profileImageDraft, setProfileImageDraft] = useState(profileImage);
+  const profileInputRef = useRef(null);
+
+  useEffect(() => {
+    setProfileImageDraft(profileImage);
+  }, [profileImage]);
+
   const [isEditing, setIsEditing] = useState(false);
   const [draftUsername, setDraftUsername] = useState(currentUser?.username || '');
   const [draftEmail, setDraftEmail] = useState(currentUser?.email || '');
 
-  const username = currentUser?.username || 'bharat.shah';
-  const email = currentUser?.email || 'bharat.shah@mithilacoders.com';
-  const avatar = currentUser?.avatar || 'B';
+  const username = currentUser?.username || 'User';
+  const email = currentUser?.email || '';
+  const avatar = currentUser?.avatar || username.charAt(0).toUpperCase();
   const isImageAvatar = isImageUrl(avatar);
+
+  const handleImageChange = async (value) => {
+    setProfileImageDraft(value);
+    if (!value || isImageUrl(value)) {
+      await onProfileImageChange(value);
+    }
+  };
 
   const handleSave = async () => {
     await onSave({ username: draftUsername, email: draftEmail });
@@ -390,96 +433,106 @@ function ProfileSection({
     <div className="flex-1 flex flex-col h-full space-y-4 animate-slide-up">
       <div className="glass-panel p-6 rounded-2xl border border-white/5 flex-1 flex flex-col min-h-[calc(100vh-12rem)] relative">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Left: profile card */}
-          <div className="bg-white/[0.03] rounded-2xl border border-white/5 p-6 flex flex-col items-center text-center">
-            <button
-              type="button"
-              title="Change profile picture"
-              onClick={() => setShowUpload(true)}
-              className="group relative rounded-full focus:outline-none focus:ring-2 focus:ring-amber-500/50 mb-4"
-            >
-              <img
-                src={avatar}
-                alt={`${username}'s avatar`}
-                className={`h-28 w-28 rounded-full object-cover border-2 border-white/10 shadow-2xl shadow-amber-500/10 transition-transform group-hover:scale-[1.02] ${isImageAvatar ? '' : 'hidden'}`}
-                onError={(event) => { event.currentTarget.style.display = 'none'; }}
-              />
-              {!isImageAvatar && (
-                <div className="h-28 w-28 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center font-black text-white text-4xl shadow-2xl shadow-amber-500/10 transition-transform group-hover:scale-[1.02]">
-                  {avatar}
+          <div className="bg-white/[0.03] rounded-2xl border border-white/5 p-6 flex flex-col">
+            <div className="flex flex-col items-center text-center mb-6">
+              <div className="relative mb-4">
+                {isImageAvatar ? (
+                  <img
+                    src={avatar}
+                    alt={`${username}'s avatar`}
+                    className="h-28 w-28 rounded-full object-cover border-2 border-white/10 shadow-2xl shadow-amber-500/10"
+                    onError={(event) => { event.currentTarget.style.display = 'none'; }}
+                  />
+                ) : (
+                  <div className="h-28 w-28 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center font-black text-white text-4xl shadow-2xl shadow-amber-500/10">
+                    {avatar}
+                  </div>
+                )}
+              </div>
+
+              {!isEditing ? (
+                <>
+                  <div>
+                    <h3 className="text-xl font-black text-slate-100">{username}</h3>
+                    <p className="text-xs text-slate-400 mt-1">{email}</p>
+                  </div>
+                  <div className="flex flex-wrap items-center justify-center gap-3 mt-4">
+                    <button
+                      onClick={() => setIsEditing(true)}
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 text-xs font-bold transition duration-200 cursor-pointer"
+                    >
+                      <Save className="w-3.5 h-3.5" />
+                      Edit Profile
+                    </button>
+                    <button
+                      onClick={onLogout}
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-600/10 hover:bg-rose-600 text-rose-400 hover:text-white border border-rose-500/20 hover:border-transparent text-xs font-bold transition duration-200 cursor-pointer"
+                    >
+                      <LogOut className="w-3.5 h-3.5" />
+                      Sign Out
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className="w-full max-w-xs space-y-3 mt-2">
+                  <div className="text-left">
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Display Name</label>
+                    <input
+                      type="text"
+                      value={draftUsername}
+                      onChange={(event) => setDraftUsername(event.target.value)}
+                      className="w-full px-3 py-2.5 rounded-xl text-slate-200 glass-input text-sm"
+                      placeholder="Your name"
+                    />
+                  </div>
+                  <div className="text-left">
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Email Address</label>
+                    <input
+                      type="email"
+                      value={draftEmail}
+                      onChange={(event) => setDraftEmail(event.target.value)}
+                      className="w-full px-3 py-2.5 rounded-xl text-slate-200 glass-input text-sm"
+                      placeholder="you@example.com"
+                    />
+                  </div>
+                  <div className="flex items-center justify-center gap-3 pt-1">
+                    <button
+                      onClick={handleSave}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 rounded-xl text-white font-bold text-xs shadow-lg shadow-amber-500/10 transition duration-200 cursor-pointer"
+                    >
+                      <Save className="w-3.5 h-3.5" />
+                      Save
+                    </button>
+                    <button
+                      onClick={handleCancel}
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 text-xs font-bold transition duration-200 cursor-pointer"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                      Cancel
+                    </button>
+                  </div>
                 </div>
               )}
-              <span className="absolute bottom-1 right-1 flex h-7 w-7 items-center justify-center rounded-full bg-amber-500 text-white shadow-lg opacity-0 transition-opacity group-hover:opacity-100">
-                <Image className="h-3.5 w-3.5" />
-              </span>
-            </button>
+            </div>
 
-            {!isEditing ? (
-              <>
-                <div>
-                  <h3 className="text-xl font-black text-slate-100">{username}</h3>
-                  <p className="text-xs text-slate-400 mt-1">{email}</p>
-                </div>
-                <div className="flex flex-wrap items-center justify-center gap-3 mt-4">
-                  <button
-                    onClick={() => setIsEditing(true)}
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 text-xs font-bold transition duration-200 cursor-pointer"
-                  >
-                    <Save className="w-3.5 h-3.5" />
-                    Edit Profile
-                  </button>
-                  <button
-                    onClick={onLogout}
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-600/10 hover:bg-rose-600 text-rose-400 hover:text-white border border-rose-500/20 hover:border-transparent text-xs font-bold transition duration-200 cursor-pointer"
-                  >
-                    <LogOut className="w-3.5 h-3.5" />
-                    Sign Out
-                  </button>
-                </div>
-              </>
-            ) : (
-              <div className="w-full max-w-xs space-y-3 mt-2">
-                <div className="text-left">
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Display Name</label>
-                  <input
-                    type="text"
-                    value={draftUsername}
-                    onChange={(event) => setDraftUsername(event.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl text-slate-200 glass-input text-sm"
-                    placeholder="Your name"
-                  />
-                </div>
-                <div className="text-left">
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Email Address</label>
-                  <input
-                    type="email"
-                    value={draftEmail}
-                    onChange={(event) => setDraftEmail(event.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl text-slate-200 glass-input text-sm"
-                    placeholder="you@example.com"
-                  />
-                </div>
-                <div className="flex items-center justify-center gap-3 pt-1">
-                  <button
-                    onClick={handleSave}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 rounded-xl text-white font-bold text-xs shadow-lg shadow-amber-500/10 transition duration-200 cursor-pointer"
-                  >
-                    <Save className="w-3.5 h-3.5" />
-                    Save
-                  </button>
-                  <button
-                    onClick={handleCancel}
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 text-xs font-bold transition duration-200 cursor-pointer"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            )}
+            <CloudinaryImageField
+              label="Profile Picture"
+              value={profileImageDraft}
+              onChange={handleImageChange}
+              inputRef={profileInputRef}
+              isUploading={isUploadingProfile}
+              isDragging={isDraggingProfile}
+              onDragChange={setIsDraggingProfile}
+              onFiles={onProfileFiles}
+              showUrlInput={showAvatarUrlInput}
+              onToggleUrlInput={() => setShowAvatarUrlInput(prev => !prev)}
+              accent="amber"
+              previewShape="circle"
+              uploadHint="Drag and drop photo, or click to browse"
+              dropHint="Drop photo here!"
+            />
           </div>
 
-          {/* Right: Account Security */}
           <PasswordSecurityPanel
             hasPassword={hasPassword}
             onSetPassword={onSetPassword}
@@ -487,58 +540,6 @@ function ProfileSection({
             onNotify={onNotify}
           />
         </div>
-
-        {showUpload && (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4 animate-slide-up"
-            onClick={() => setShowUpload(false)}
-          >
-            <div
-              className="w-full max-w-sm glass-panel border border-white/10 rounded-2xl shadow-2xl p-6"
-              onClick={(event) => event.stopPropagation()}
-            >
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-bold text-slate-100">Upload Profile Picture</h3>
-                <button
-                  type="button"
-                  onClick={() => setShowUpload(false)}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition cursor-pointer"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              <div
-                onDragOver={(event) => { event.preventDefault(); setIsDragging(true); }}
-                onDragLeave={(event) => { event.preventDefault(); setIsDragging(false); }}
-                onDrop={(event) => {
-                  event.preventDefault();
-                  setIsDragging(false);
-                  onProfileFiles(event.dataTransfer.files);
-                }}
-                onClick={() => profileInputRef.current?.click()}
-                className={`flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-2xl cursor-pointer transition duration-200 min-h-[180px] ${
-                  isDragging
-                    ? 'border-amber-500 bg-amber-500/10 text-amber-400'
-                    : 'border-slate-700/80 hover:border-amber-500/60 bg-slate-800/20 hover:bg-slate-800/40 text-slate-400'
-                }`}
-              >
-                <input
-                  type="file"
-                  ref={profileInputRef}
-                  onChange={(event) => onProfileFiles(event.target.files)}
-                  accept="image/*"
-                  className="hidden"
-                />
-                <Image className={`w-10 h-10 mb-3 transition-transform duration-200 ${isDragging ? 'scale-110 text-amber-400' : 'text-slate-500'}`} />
-                <p className="text-xs font-semibold text-center">
-                  {isUploadingProfile ? 'Uploading...' : (isDragging ? 'Drop here' : 'Drag & drop or click to upload')}
-                </p>
-                <p className="text-[10px] text-slate-500 mt-1">PNG, JPG up to 2MB</p>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
@@ -637,84 +638,22 @@ function PlatformModal({
             </div>
           </Field>
 
-          <Field label="Platform Logo">
-            {logo ? (
-              <div className="flex flex-col items-center justify-center p-4 border border-dashed border-emerald-500/50 bg-emerald-500/5 rounded-xl relative group min-h-[120px]">
-                <img
-                  src={logo}
-                  alt="Logo Preview"
-                  className="w-16 h-16 rounded-xl object-contain bg-white/5 p-1.5 border border-white/10 mb-2"
-                />
-                <span className="text-xs text-slate-400 truncate max-w-xs px-2">
-                  {logo.startsWith('data:') ? 'Uploaded custom logo' : (isImageUrl(logo) ? 'Logo ready' : logo)}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => onLogoChange('')}
-                  className="absolute top-2 right-2 p-1.5 bg-slate-800/80 hover:bg-rose-600 text-slate-400 hover:text-white rounded-lg transition"
-                  title="Remove Logo"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            ) : (
-              <div
-                onDragOver={(event) => { event.preventDefault(); onDragChange(true); }}
-                onDragLeave={(event) => { event.preventDefault(); onDragChange(false); }}
-                onDrop={(event) => {
-                  event.preventDefault();
-                  onDragChange(false);
-                  onLogoFiles(event.dataTransfer.files);
-                }}
-                onClick={() => logoInputRef.current?.click()}
-                className={`flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-xl cursor-pointer transition duration-200 min-h-[120px] ${
-                  isDraggingLogo
-                    ? 'border-emerald-500 bg-emerald-500/10 text-emerald-400'
-                    : 'border-slate-700/80 hover:border-emerald-500/60 bg-slate-800/20 hover:bg-slate-800/40 text-slate-400'
-                }`}
-              >
-                <input
-                  type="file"
-                  ref={logoInputRef}
-                  onChange={(event) => onLogoFiles(event.target.files)}
-                  accept="image/*"
-                  className="hidden"
-                />
-                <Image className={`w-8 h-8 mb-2 transition-transform duration-200 ${isDraggingLogo ? 'scale-110 text-emerald-400' : 'text-slate-500'}`} />
-                <p className="text-xs font-semibold text-center">
-                  {isUploadingLogo ? 'Uploading to Cloudinary...' : (isDraggingLogo ? 'Drop logo here!' : 'Drag and drop logo, or click to browse')}
-                </p>
-                <p className="text-[10px] text-slate-500 mt-1">Supports PNG, JPG, SVG (Max 2MB)</p>
-              </div>
-            )}
-
-            <div className="mt-2 text-right">
-              <button
-                type="button"
-                onClick={onToggleLogoUrl}
-                className="text-[11px] text-emerald-400 hover:underline"
-              >
-                {showLogoUrlInput ? 'Hide URL input' : 'Or paste a logo URL instead'}
-              </button>
-            </div>
-
-            {showLogoUrlInput && (
-              <div className="mt-3">
-                <div className="relative">
-                  <span className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-500">
-                    <Globe className="w-4 h-4" />
-                  </span>
-                  <input
-                    type="url"
-                    placeholder="https://cdn.svgporn.com/logos/example.svg"
-                    value={logo}
-                    onChange={(event) => onLogoChange(event.target.value)}
-                    className="w-full pl-11 pr-4 py-3.5 rounded-xl text-slate-200 glass-input text-sm"
-                  />
-                </div>
-              </div>
-            )}
-          </Field>
+          <CloudinaryImageField
+            label="Platform Logo"
+            value={logo}
+            onChange={onLogoChange}
+            inputRef={logoInputRef}
+            isUploading={isUploadingLogo}
+            isDragging={isDraggingLogo}
+            onDragChange={onDragChange}
+            onFiles={onLogoFiles}
+            showUrlInput={showLogoUrlInput}
+            onToggleUrlInput={onToggleLogoUrl}
+            accent="emerald"
+            previewShape="rounded"
+            uploadHint="Drag and drop logo, or click to browse"
+            dropHint="Drop logo here!"
+          />
 
           <ModalActions onClose={onClose} submitText="Register Platform" tone="emerald" />
         </form>
@@ -766,6 +705,121 @@ function ModalActions({ onClose, submitText, tone }) {
   );
 }
 
+function CloudinaryImageField({
+  label,
+  value,
+  onChange,
+  inputRef,
+  isUploading,
+  isDragging,
+  onDragChange,
+  onFiles,
+  showUrlInput,
+  onToggleUrlInput,
+  accent = 'emerald',
+  previewShape = 'rounded',
+  uploadHint = 'Drag and drop image, or click to browse',
+  dropHint = 'Drop image here!',
+}) {
+  const accentStyles = {
+    emerald: {
+      previewBorder: 'border-emerald-500/50 bg-emerald-500/5',
+      activeBorder: 'border-emerald-500 bg-emerald-500/10 text-emerald-400',
+      hoverBorder: 'hover:border-emerald-500/60',
+      iconActive: 'text-emerald-400',
+      link: 'text-emerald-400',
+    },
+    amber: {
+      previewBorder: 'border-amber-500/50 bg-amber-500/5',
+      activeBorder: 'border-amber-500 bg-amber-500/10 text-amber-400',
+      hoverBorder: 'hover:border-amber-500/60',
+      iconActive: 'text-amber-400',
+      link: 'text-amber-400',
+    },
+  };
+  const tone = accentStyles[accent] || accentStyles.emerald;
+  const previewClass = previewShape === 'circle'
+    ? 'w-20 h-20 rounded-full object-cover'
+    : 'w-16 h-16 rounded-xl object-contain bg-white/5 p-1.5 border border-white/10';
+
+  return (
+    <Field label={label}>
+      {value ? (
+        <div className={`flex flex-col items-center justify-center p-4 border border-dashed ${tone.previewBorder} rounded-xl relative group min-h-[120px]`}>
+          <img src={value} alt={`${label} preview`} className={`${previewClass} mb-2`} />
+          <span className="text-xs text-slate-400 truncate max-w-xs px-2">
+            {value.startsWith('data:') ? 'Uploaded custom image' : (isImageUrl(value) ? 'Image ready' : value)}
+          </span>
+          <button
+            type="button"
+            onClick={() => onChange('')}
+            className="absolute top-2 right-2 p-1.5 bg-slate-800/80 hover:bg-rose-600 text-slate-400 hover:text-white rounded-lg transition"
+            title={`Remove ${label}`}
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      ) : (
+        <div
+          onDragOver={(event) => { event.preventDefault(); onDragChange(true); }}
+          onDragLeave={(event) => { event.preventDefault(); onDragChange(false); }}
+          onDrop={(event) => {
+            event.preventDefault();
+            onDragChange(false);
+            onFiles(event.dataTransfer.files);
+          }}
+          onClick={() => inputRef.current?.click()}
+          className={`flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-xl cursor-pointer transition duration-200 min-h-[120px] ${
+            isDragging
+              ? tone.activeBorder
+              : `border-slate-700/80 ${tone.hoverBorder} bg-slate-800/20 hover:bg-slate-800/40 text-slate-400`
+          }`}
+        >
+          <input
+            type="file"
+            ref={inputRef}
+            onChange={(event) => onFiles(event.target.files)}
+            accept="image/*"
+            className="hidden"
+          />
+          <Image className={`w-8 h-8 mb-2 transition-transform duration-200 ${isDragging ? `scale-110 ${tone.iconActive}` : 'text-slate-500'}`} />
+          <p className="text-xs font-semibold text-center">
+            {isUploading ? 'Uploading to Cloudinary...' : (isDragging ? dropHint : uploadHint)}
+          </p>
+          <p className="text-[10px] text-slate-500 mt-1">Supports PNG, JPG, SVG (Max 2MB)</p>
+        </div>
+      )}
+
+      <div className="mt-2 text-right">
+        <button
+          type="button"
+          onClick={onToggleUrlInput}
+          className={`text-[11px] ${tone.link} hover:underline`}
+        >
+          {showUrlInput ? 'Hide URL input' : 'Or paste an image URL instead'}
+        </button>
+      </div>
+
+      {showUrlInput && (
+        <div className="mt-3">
+          <div className="relative">
+            <span className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-500">
+              <Globe className="w-4 h-4" />
+            </span>
+            <input
+              type="url"
+              placeholder="https://res.cloudinary.com/your-cloud/image/upload/..."
+              value={value}
+              onChange={(event) => onChange(event.target.value)}
+              className="w-full pl-11 pr-4 py-3.5 rounded-xl text-slate-200 glass-input text-sm"
+            />
+          </div>
+        </div>
+      )}
+    </Field>
+  );
+}
+
 function Field({ label, children }) {
   return (
     <div>
@@ -814,9 +868,7 @@ function PasswordSecurityPanel({
         <div>
           <h3 className="font-bold text-slate-200 text-sm">Account Security</h3>
           <p className="text-xs text-slate-400 mt-1">
-            {isFallbackMode
-              ? 'Local mode stores password hashes in this browser only.'
-              : 'Cloud mode uses Supabase Auth for account password changes.'}
+            Account passwords are managed through Supabase Auth.
           </p>
         </div>
       </div>

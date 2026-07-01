@@ -659,8 +659,8 @@ export default function SmtpConfig({ onNotify }) {
                     body: 'Most ISPs restrict outbound port 25. Use TLS port 587 or SSL port 465 for reliable delivery.'
                   },
                   {
-                    title: 'Security Sandbox Alerts',
-                    body: 'In sandbox mode, emails become local records instead of real SMTP dispatches.'
+                    title: 'Edge Function Required',
+                    body: 'Live email delivery requires the send-email Supabase Edge Function to be deployed and SMTP settings saved in system_settings.'
                   }
                 ].map((item) => (
                   <div key={item.title} className="p-3 bg-slate-900/60 rounded-xl border border-slate-800 space-y-1">

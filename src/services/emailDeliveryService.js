@@ -1,4 +1,4 @@
-import { supabase, isFallbackMode } from "../models/dbClient.js";
+import { supabase } from "../models/dbClient.js";
 
 const FUNCTION_NAME = "send-email";
 
@@ -35,13 +35,6 @@ export async function sendEmail({ to, subject, textBody, emailType }) {
   if (!to || !subject || !textBody) {
     return { success: false, error: "Missing to, subject or body", source: "client" };
   }
-  if (isFallbackMode) {
-    return {
-      success: true,
-      source: "simulated",
-      message: `Simulated dispatch to ${Array.isArray(to) ? to.join(", ") : to}`,
-    };
-  }
 
   try {
     const { data, error } = await supabase.functions.invoke(FUNCTION_NAME, {
@@ -72,7 +65,6 @@ export async function sendEmail({ to, subject, textBody, emailType }) {
 
 /**
  * Test the SMTP connection by sending a real email via the edge function.
- * @param {{to: string, subject: string, textBody: string}} params
  */
 export async function testSmtpConnection(params) {
   return sendEmail({ ...params, emailType: "SMTP Test" });
