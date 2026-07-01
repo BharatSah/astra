@@ -159,11 +159,11 @@ export default function App() {
       )}
       {/* Sidebar Navigation */}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 w-64 bg-dark-950/80 backdrop-blur-xl p-6 flex flex-col justify-between transform transition-transform duration-300 ${
+        className={`fixed inset-y-0 left-0 z-40 w-64 bg-dark-950/80 backdrop-blur-xl pt-6 px-6 pb-0 flex flex-col transform transition-transform duration-300 ${
           isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
         } lg:translate-x-0 lg:static lg:sticky lg:top-0 lg:h-screen border-r border-white/5`}
       >
-        <div className="space-y-8">
+        <div className="space-y-8 flex-1 min-h-0 overflow-y-auto">
           {/* Logo / Branding */}
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-3">
@@ -285,12 +285,9 @@ export default function App() {
           </nav>
         </div>
 
-        {/* Sidebar user profile footer */}
-        <div className="pt-3 border-t border-white/5 mt-auto">
-          <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-[linear-gradient(145deg,rgba(15,23,42,0.92),rgba(3,7,18,0.92))] p-3 shadow-xl shadow-black/20">
-            <div className="absolute inset-x-3 top-0 h-px bg-gradient-to-r from-transparent via-amber-300/40 to-transparent" />
-            <div className="absolute -right-10 -top-12 h-24 w-24 rounded-full bg-amber-400/10 blur-2xl pointer-events-none" />
-
+        {/* Sidebar user profile footer — full-bleed, flush with sidebar edges */}
+        <div className="mt-auto shrink-0 -mx-6 border-t border-white/5">
+          <div className="relative overflow-hidden bg-white/[0.03] px-4 py-3">
             <div className="flex items-center gap-3">
               <div className="relative shrink-0">
                 {isImageUrl(currentUser.avatar) ? (
@@ -347,7 +344,7 @@ export default function App() {
             </div>
           </div>
 
-          <p className="text-[9px] text-slate-600 text-center tracking-wide mt-2">Version 1.0.0 (c) Astra</p>
+          <p className="text-[9px] text-slate-600 text-center tracking-wide py-2 px-4">Version 1.0.0 (c) Astra</p>
         </div>
       </aside>
 
