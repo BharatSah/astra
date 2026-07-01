@@ -87,7 +87,11 @@ export function usePayments({ notify, triggerEmail }) {
     }
     const serviceObj = services.find(s => s.id === rem.service_id);
     const serviceName = serviceObj ? serviceObj.name : 'Selected Service';
-    const recipient = templates.email_recipient?.to_email || 'admin@astra.com';
+    const recipient = templates.email_recipient?.to_email?.trim();
+    if (!recipient) {
+      notify('warning', 'Set an admin email in Email & SMTP → Templates before sending reminders.');
+      return;
+    }
 
     const ctx = buildPaymentContext({ reminder: rem, serviceName });
     const subject = fillTemplate(templates.payment_reminder?.subject || 'Payment Reminder', ctx);

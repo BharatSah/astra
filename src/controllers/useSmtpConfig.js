@@ -3,8 +3,8 @@ import { fetchSettingsObject, upsertSetting } from '../models/settingsModel.js';
 import { testSmtpConnection } from '../services/emailDeliveryService.js';
 
 // Controller: SMTP config + email templates + diagnostics. Owns settings load,
-// save (smtp_config / email_templates upsert), token insertion, and the staged
-// local SMTP diagnostic simulation.
+// save (smtp_config / email_templates upsert), token insertion, and live SMTP
+// testing via the send-email edge function.
 export function useSmtpConfig({ notify }) {
   const [smtp, setSmtp] = useState({
     host: 'smtp.gmail.com',
@@ -33,8 +33,9 @@ export function useSmtpConfig({ notify }) {
       if (settings.email_templates) setTemplates(settings.email_templates);
     } catch (err) {
       console.error('Error fetching system settings:', err.message);
+      notify('error', 'Failed to load email settings. Check your connection and try again.');
     }
-  }, []);
+  }, [notify]);
 
   useEffect(() => { refresh(); }, [refresh]);
 
@@ -86,8 +87,23 @@ export function useSmtpConfig({ notify }) {
   }, []);
 
   const runDiagnostic = useCallback(async () => {
+    if (!smtp.username || !smtp.password) {
+      notify('error', 'Enter and save SMTP credentials before testing.');
+      return;
+    }
+
     setTestingConnection(true);
-    setTestLogs(['Invoking send-email edge function...']);
+    setTestLogs(['Saving SMTP settings to database...']);
+
+    try {
+      await upsertSetting('smtp_config', smtp);
+      setTestLogs(prev => [...prev, 'SMTP settings saved.', 'Invoking send-email edge function...']);
+    } catch (err) {
+      setTestLogs(prev => [...prev, `FAILED: Could not save SMTP settings (${err.message})`]);
+      setTestingConnection(false);
+      notify('error', 'Save SMTP settings before running the connection test.');
+      return;
+    }
 
     const testTo = templates.email_recipient?.to_email || smtp.senderEmail || smtp.username;
     if (!testTo) {

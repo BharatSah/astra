@@ -11,12 +11,27 @@ function buildHtmlBody(text) {
     .replace(/\n/g, "<br/>")}</div>`;
 }
 
+function extractEdgeError(error, data) {
+  if (data?.error) return String(data.error);
+  if (error?.context?.body) {
+    try {
+      const parsed = typeof error.context.body === "string"
+        ? JSON.parse(error.context.body)
+        : error.context.body;
+      if (parsed?.error) return String(parsed.error);
+    } catch {
+      // ignore malformed edge error body
+    }
+  }
+  return error?.message || "Email dispatch failed";
+}
+
 /**
  * Send an email through the Supabase Edge Function.
- * @param {{to: string | string[], subject: string, textBody: string}} params
+ * @param {{to: string | string[], subject: string, textBody: string, emailType?: string}} params
  * @returns {Promise<{success: boolean, message?: string, error?: string, source: string}>}
  */
-export async function sendEmail({ to, subject, textBody }) {
+export async function sendEmail({ to, subject, textBody, emailType }) {
   if (!to || !subject || !textBody) {
     return { success: false, error: "Missing to, subject or body", source: "client" };
   }
@@ -35,11 +50,12 @@ export async function sendEmail({ to, subject, textBody }) {
         subject,
         textBody,
         htmlBody: buildHtmlBody(textBody),
+        emailType: emailType || null,
       },
     });
 
     if (error) {
-      return { success: false, error: error.message, source: "edge" };
+      return { success: false, error: extractEdgeError(error, data), source: "edge" };
     }
     if (!data?.success) {
       return { success: false, error: data?.error || "Email dispatch failed", source: "edge" };
@@ -59,5 +75,5 @@ export async function sendEmail({ to, subject, textBody }) {
  * @param {{to: string, subject: string, textBody: string}} params
  */
 export async function testSmtpConnection(params) {
-  return sendEmail(params);
+  return sendEmail({ ...params, emailType: "SMTP Test" });
 }

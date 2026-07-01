@@ -45,7 +45,6 @@ const ACCENTS = {
 
 export default function App() {
   const { notifications, notify, dismiss } = useNotifications();
-  const { triggerEmail, emailLogs } = useEmailDispatch(notify);
   const {
     authLoading,
     isLoggedIn,
@@ -58,6 +57,9 @@ export default function App() {
     setPassword,
     changePassword
   } = useAuth(notify);
+
+  const sessionReady = isLoggedIn || isFallbackMode;
+  const { triggerEmail, emailLogs } = useEmailDispatch(notify, sessionReady);
 
   const [activeTab, setActiveTab] = useState('dashboard');
   const [activeSettingsTab, setActiveSettingsTab] = useState('services');
@@ -126,6 +128,15 @@ export default function App() {
     { id: 'emaillogs', label: 'Email Logs', icon: Mail },
     { id: 'settings', label: 'System Settings', icon: SettingsIcon }
   ];
+
+  if (authLoading && !isFallbackMode) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-dark-950 gap-4">
+        <div className="h-10 w-10 rounded-full border-2 border-amber-500/30 border-t-amber-400 animate-spin" />
+        <p className="text-sm text-slate-400">Restoring your session…</p>
+      </div>
+    );
+  }
 
   if (!isLoggedIn) {
     return (
@@ -358,7 +369,7 @@ export default function App() {
         </div>
 
         {/* Dynamic page content scroll wrapper */}
-        <main className="flex-1 overflow-y-auto p-6 md:p-8 max-w-7xl w-full mx-auto pb-16">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 md:p-8 max-w-7xl w-full mx-auto pb-20 sm:pb-16">
           {isFallbackMode && (
             <div className="mb-6 p-3 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-xl text-xs flex items-center gap-2.5 animate-slide-up">
               <span className="h-2 w-2 rounded-full bg-amber-400 animate-pulse"></span>
@@ -371,11 +382,11 @@ export default function App() {
       </div>
 
       {/* Global Notifications system toasts wrapper */}
-      <div className="fixed bottom-6 right-6 z-50 space-y-3 max-w-sm w-full">
+      <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 sm:bottom-6 z-50 space-y-2 sm:space-y-3 max-w-sm sm:w-full pointer-events-none">
         {notifications.map((notif) => (
           <div
             key={notif.id}
-            className={`p-4 rounded-xl border shadow-xl flex justify-between items-start animate-slide-up backdrop-blur-xl ${
+            className={`pointer-events-auto p-3 sm:p-4 rounded-xl border shadow-xl flex justify-between items-start gap-2 animate-slide-up backdrop-blur-xl ${
               notif.type === 'success'
                 ? 'bg-emerald-950/80 border-emerald-500/20 text-emerald-300'
                 : notif.type === 'error'
@@ -383,7 +394,7 @@ export default function App() {
                   : 'bg-amber-950/80 border-amber-500/20 text-amber-300'
             }`}
           >
-            <p className="text-xs font-semibold">{notif.message}</p>
+            <p className="text-xs font-semibold break-words min-w-0 flex-1">{notif.message}</p>
             <button
               onClick={() => dismiss(notif.id)}
               className="text-slate-400 hover:text-white ml-2 shrink-0"

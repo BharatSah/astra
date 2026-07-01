@@ -26,6 +26,41 @@ function jsonResponse(payload: unknown, status: number) {
   });
 }
 
+async function logEmailDispatch(
+  supabaseUrl: string,
+  serviceRoleKey: string,
+  entry: {
+    recipient: string;
+    subject: string;
+    body: string;
+    status: "sent" | "failed";
+    emailType?: string | null;
+    errorMessage?: string | null;
+  },
+) {
+  try {
+    await fetch(`${supabaseUrl}/rest/v1/email_logs`, {
+      method: "POST",
+      headers: {
+        apikey: serviceRoleKey,
+        Authorization: `Bearer ${serviceRoleKey}`,
+        "Content-Type": "application/json",
+        Prefer: "return=minimal",
+      },
+      body: JSON.stringify({
+        recipient: entry.recipient,
+        subject: entry.subject,
+        body: entry.body,
+        status: entry.status,
+        email_type: entry.emailType || null,
+        error_message: entry.errorMessage || null,
+      }),
+    });
+  } catch (err) {
+    console.error("Failed to write email_logs row:", err);
+  }
+}
+
 function badRequest(message: string) {
   return jsonResponse({ success: false, error: message }, 400);
 }
@@ -45,7 +80,7 @@ Deno.serve(async (req: Request) => {
     return badRequest("Invalid JSON body");
   }
 
-  const { to, subject, textBody } = body;
+  const { to, subject, textBody, emailType } = body;
   const htmlBody = body.htmlBody ?? body.body;
   if (!to || !subject || (!htmlBody && !textBody)) {
     return badRequest("Missing required fields: to, subject, textBody or htmlBody");
@@ -89,6 +124,7 @@ Deno.serve(async (req: Request) => {
     });
 
     const recipients = Array.isArray(to) ? to : [to];
+    const bodyText = textBody ? String(textBody) : String(htmlBody || "");
     await transporter.sendMail({
       from,
       to: recipients.join(", "),
@@ -97,6 +133,16 @@ Deno.serve(async (req: Request) => {
       html: htmlBody ? String(htmlBody) : undefined,
     });
 
+    for (const recipient of recipients) {
+      await logEmailDispatch(supabaseUrl, serviceRoleKey, {
+        recipient: String(recipient),
+        subject: String(subject),
+        body: bodyText,
+        status: "sent",
+        emailType: emailType ? String(emailType) : null,
+      });
+    }
+
     return jsonResponse(
       { success: true, message: `Email dispatched to ${recipients.join(", ")}` },
       200,
@@ -104,6 +150,18 @@ Deno.serve(async (req: Request) => {
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.error("SMTP send failed:", message);
+    const recipients = Array.isArray(to) ? to : [to];
+    const bodyText = textBody ? String(textBody) : String(htmlBody || "");
+    for (const recipient of recipients) {
+      await logEmailDispatch(supabaseUrl, serviceRoleKey, {
+        recipient: String(recipient),
+        subject: String(subject),
+        body: bodyText,
+        status: "failed",
+        emailType: emailType ? String(emailType) : null,
+        errorMessage: message,
+      });
+    }
     return jsonResponse({ success: false, error: message }, 500);
   }
 });

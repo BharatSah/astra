@@ -17,17 +17,15 @@ test.describe('Expiry Email Reminder tests', () => {
     const mailButton = row.locator('button[title="Send Email Alert"]');
     await mailButton.click();
 
-    // 3. Verify specific toast notification
-    await expect(page.locator('text=SMTP Alert dispatched to aiden@example.com!').first()).toBeVisible();
-    await expect(page.locator('text=SMTP Alert dispatched to admin@astra.com!').first()).toBeVisible();
+    // 3. Verify toast (warning emails route to admin when warning_recipient_type is admin)
+    await expect(page.locator('text=Simulated dispatch to admin@projectastra.com!').first()).toBeVisible();
 
     // 4. Navigate to Email Logs
     await page.click('button:has-text("Email Logs")');
     await expect(page.locator('h1', { hasText: 'Send History' })).toBeVisible();
 
-    // 5. Verify the log entries exist
-    await expect(page.locator('tr', { hasText: 'aiden@example.com' }).first()).toBeVisible();
-    await expect(page.locator('tr', { hasText: 'admin@astra.com' }).first()).toBeVisible();
+    // 5. Verify the log entry exists
+    await expect(page.locator('tr', { hasText: 'admin@projectastra.com' }).first()).toBeVisible();
   });
 
   test('should save recipient_emails and trigger email correctly', async ({ page }) => {
@@ -58,8 +56,7 @@ test.describe('Expiry Email Reminder tests', () => {
     // 4. Click Mail button for Temp Test Customer
     await row.locator('button[title="Send Email Alert"]').click();
 
-    // 5. Verify toast notifications for custom emails
-    await expect(page.locator('text=SMTP Alert dispatched to custom1@example.com!').first()).toBeVisible();
-    await expect(page.locator('text=SMTP Alert dispatched to custom2@example.com!').first()).toBeVisible();
+    // 5. With admin routing, warning emails go to the configured admin address
+    await expect(page.locator('text=Simulated dispatch to admin@projectastra.com!').first()).toBeVisible();
   });
 });

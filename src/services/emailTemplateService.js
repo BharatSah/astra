@@ -34,11 +34,21 @@ export function buildPaymentContext({ reminder, serviceName }) {
   };
 }
 
-// Resolve recipients for a customer expiry email: custom comma list or the
-// customer's primary email.
-export function resolveCustomerRecipients(customer) {
+// Resolve recipients for a customer expiry email using template routing rules,
+// then custom comma list or the customer's primary email.
+export function resolveCustomerRecipients(customer, emailRecipientConfig, { isExpired } = {}) {
+  const config = emailRecipientConfig || {};
+  const routeToAdmin = isExpired
+    ? config.expired_recipient_type === 'admin'
+    : config.warning_recipient_type === 'admin';
+
+  if (routeToAdmin) {
+    const adminEmail = config.to_email?.trim();
+    if (adminEmail) return [adminEmail];
+  }
+
   if (customer.recipient_emails) {
     return customer.recipient_emails.split(',').map(e => e.trim()).filter(Boolean);
   }
-  return [customer.email];
+  return customer.email ? [customer.email] : [];
 }

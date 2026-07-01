@@ -106,8 +106,8 @@ export default function PaymentReminders({ onNotify, onTriggerEmail, onTabChange
         </div>
       ) : (
         <div className="glass-panel rounded-2xl border border-white/5 overflow-hidden flex-1 flex flex-col">
-          <div className="overflow-x-auto flex-1">
-            <table className="w-full text-left border-collapse text-sm">
+          <div className="overflow-x-auto flex-1 overscroll-x-contain">
+            <table className="w-full text-left border-collapse text-sm min-w-[720px]">
               <thead>
                 <tr className="bg-white/[0.03] border-b border-white/5 text-slate-400 font-semibold uppercase tracking-wider">
                   <th className="p-4">Customer</th>
@@ -191,8 +191,8 @@ export default function PaymentReminders({ onNotify, onTriggerEmail, onTabChange
 
       {/* Add / Edit Reminder Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4 animate-slide-up">
-          <div className="w-full max-w-2xl glass-panel border border-white/10 rounded-2xl shadow-2xl shadow-sky-500/5 flex flex-col max-h-[90vh]">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-md p-0 sm:p-4 animate-slide-up">
+          <div className="w-full max-w-2xl glass-panel border border-white/10 rounded-t-2xl sm:rounded-2xl shadow-2xl shadow-sky-500/5 flex flex-col max-h-[92dvh] sm:max-h-[90vh] overflow-hidden">
 
             <div className="flex items-center justify-between gap-4 px-6 py-5 border-b border-white/5">
               <div className="flex items-center gap-3">
@@ -209,7 +209,7 @@ export default function PaymentReminders({ onNotify, onTriggerEmail, onTabChange
               </button>
             </div>
 
-            <div className="p-6 overflow-y-auto">
+            <div className="p-4 sm:p-6 overflow-y-auto overscroll-contain flex-1 min-h-0">
               {services.length === 0 ? (
                 <div className="py-12 text-center text-sm text-slate-400 space-y-4">
                   <div className="h-14 w-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mx-auto text-slate-600">

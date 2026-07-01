@@ -16,6 +16,9 @@ export async function fetchSettingsObject() {
 }
 
 export async function upsertSetting(key, value) {
-  const { error } = await supabase.from('system_settings').upsert({ key, value });
+  const { error } = await supabase.from('system_settings').upsert(
+    { key, value, updated_at: new Date().toISOString() },
+    { onConflict: 'key' }
+  );
   if (error) throw error;
 }

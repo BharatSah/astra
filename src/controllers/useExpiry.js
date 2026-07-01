@@ -32,11 +32,17 @@ export function useExpiry({ notify, triggerEmail }) {
     const body = fillTemplate(tpl?.[templateKey]?.body || fallbackBody, ctx);
     const emailType = opts.emailType || (isExpired ? 'Service Expired Alert' : 'Expiry Warning Alert');
 
-    const recipients = resolveCustomerRecipients(customer);
+    const recipients = resolveCustomerRecipients(customer, tpl?.email_recipient, { isExpired });
+    if (!recipients.length) {
+      if (opts.notify !== false) {
+        notify('warning', 'No recipient email configured. Set admin email in Email & SMTP or add customer email.');
+      }
+      return;
+    }
     recipients.forEach(recipient => {
       triggerEmail({ recipient, subject, body, type: emailType });
     });
-  }, [triggerEmail]);
+  }, [triggerEmail, notify]);
 
   const fetchAll = useCallback(async () => {
     try {
@@ -55,11 +61,11 @@ export function useExpiry({ notify, triggerEmail }) {
       const processed = customersData.map(cust => {
         const status = computeExpiryStatus(cust.expiry_date, cust.notify_before_days);
         // Auto-send expired emails on load (once per customer per day).
-        if (status === 'expired' && (cust.recipient_emails || cust.email)) {
+        if (status === 'expired' && cust.send_email_reminder !== false && (cust.recipient_emails || cust.email)) {
           const sentKey = `expiry_sent_${cust.id}_${today.toISOString().split('T')[0]}`;
           if (!localStorage.getItem(sentKey)) {
             localStorage.setItem(sentKey, 'true');
-            dispatchExpiryEmail(cust, servicesData, tpl, { emailType: 'Auto Expired Alert' });
+            dispatchExpiryEmail(cust, servicesData, tpl, { emailType: 'Auto Expired Alert', notify: false });
           }
         }
         return { ...cust, status };

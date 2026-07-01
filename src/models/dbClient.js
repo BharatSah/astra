@@ -51,12 +51,18 @@ class MockQueryBuilder {
     const newItems = valueArray.map(item => ({
       id: item.id || Math.random().toString(36).substring(2, 11),
       created_at: new Date().toISOString(),
+      sent_at: item.sent_at || new Date().toISOString(),
       ...item
     }));
     this.db[this.tableName] = [...(this.db[this.tableName] || []), ...newItems];
     setLocalDB(this.db);
     this.data = newItems;
-    return this;
+    const result = {
+      select: () => result,
+      then: (onfulfilled, onrejected) =>
+        Promise.resolve(onfulfilled({ data: newItems, error: this.error })).catch(onrejected),
+    };
+    return result;
   }
 
   update(values) { this.updateValues = values; return this; }
@@ -124,12 +130,24 @@ let fallbackLogged = false;
 // Wrapper that executes a real Supabase query; if it fails with a table or
 // network error, silently falls back to the localStorage mock so the UI keeps
 // working even when Supabase tables are missing.
-async function withFallback(operation) {
+async function withFallback(queryFn) {
   if (!realSupabase) {
-    return operation(mockSupabase);
+    return queryFn(mockSupabase);
   }
   try {
-    return await operation(realSupabase);
+    const result = await queryFn(realSupabase);
+    if (result?.error) {
+      const message = result.error.message || '';
+      const isMissingTable = /relation ".*" does not exist|Table '\w+' doesn't exist|42P01|could not connect|NetworkError|Failed to fetch/i.test(message);
+      if (isMissingTable) {
+        if (!fallbackLogged) {
+          console.warn('Supabase query failed; falling back to localStorage mock.', result.error);
+          fallbackLogged = true;
+        }
+        return queryFn(mockSupabase);
+      }
+    }
+    return result;
   } catch (err) {
     const message = err?.message || '';
     const isMissingTable = /relation ".*" does not exist|Table '\w+' doesn't exist|42P01|could not connect|NetworkError|Failed to fetch/i.test(message);
@@ -138,7 +156,7 @@ async function withFallback(operation) {
         console.warn('Supabase query failed; falling back to localStorage mock.', err);
         fallbackLogged = true;
       }
-      return operation(mockSupabase);
+      return queryFn(mockSupabase);
     }
     throw err;
   }
@@ -148,14 +166,20 @@ export const supabase = {
   from(tableName) {
     return {
       select: (...args) => build((client) => client.from(tableName).select(...args)),
-      insert: (values) => build((client) => client.from(tableName).insert(values)),
+      insert: (values) => {
+        const base = (client) => client.from(tableName).insert(values);
+        return {
+          select: (columns = '*') => build((client) => base(client).select(columns)),
+          then: (onfulfilled, onrejected) => build(base).then(onfulfilled, onrejected),
+        };
+      },
       update: (values) => ({
         eq: (column, value) => build((client) => client.from(tableName).update(values).eq(column, value))
       }),
       delete: () => ({
         eq: (column, value) => build((client) => client.from(tableName).delete().eq(column, value))
       }),
-      upsert: (values) => build((client) => client.from(tableName).upsert(values))
+      upsert: (values, options) => build((client) => client.from(tableName).upsert(values, options))
     };
   },
   auth: realSupabase ? realSupabase.auth : {
