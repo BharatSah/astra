@@ -16,7 +16,9 @@ import {
   EyeOff,
   Trash2,
   X,
-  ExternalLink
+  ExternalLink,
+  MoreVertical,
+  Pencil
 } from 'lucide-react';
 
 export default function Settings({
@@ -36,22 +38,32 @@ export default function Settings({
     loadingServices,
     loadingPlatforms,
     isUploadingLogo,
+    isUploadingServiceLogo,
     isUploadingProfile,
     addService,
+    editService,
     removeService,
     addPlatform,
+    editPlatform,
     removePlatform,
     uploadLogo,
+    uploadServiceLogo,
     uploadProfileImage
   } = useSettings({ notify: onNotify });
 
   const [newServiceName, setNewServiceName] = useState('');
   const [newServiceDesc, setNewServiceDesc] = useState('');
+  const [newServiceLogo, setNewServiceLogo] = useState('');
+  const [editingServiceId, setEditingServiceId] = useState(null);
   const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
+  const [showServiceLogoUrlInput, setShowServiceLogoUrlInput] = useState(false);
+  const [isDraggingServiceLogo, setIsDraggingServiceLogo] = useState(false);
+  const serviceLogoInputRef = useRef(null);
 
   const [newPlatformName, setNewPlatformName] = useState('');
   const [newPlatformUrl, setNewPlatformUrl] = useState('');
   const [newPlatformLogo, setNewPlatformLogo] = useState('');
+  const [editingPlatformName, setEditingPlatformName] = useState(null);
   const [isPlatformModalOpen, setIsPlatformModalOpen] = useState(false);
   const [showLogoUrlInput, setShowLogoUrlInput] = useState(false);
   const [isDraggingLogo, setIsDraggingLogo] = useState(false);
@@ -75,28 +87,81 @@ export default function Settings({
     return true;
   };
 
-  const handleAddService = async (event) => {
-    event.preventDefault();
-    const ok = await addService(newServiceName, newServiceDesc);
-    if (!ok) return;
+  const resetServiceForm = () => {
     setNewServiceName('');
     setNewServiceDesc('');
-    setIsServiceModalOpen(false);
+    setNewServiceLogo('');
+    setShowServiceLogoUrlInput(false);
+    setIsDraggingServiceLogo(false);
+    setEditingServiceId(null);
   };
 
-  const handleAddPlatform = async (event) => {
-    event.preventDefault();
-    const ok = await addPlatform({
-      name: newPlatformName,
-      url: newPlatformUrl,
-      logo: newPlatformLogo
-    });
-    if (!ok) return;
+  const resetPlatformForm = () => {
     setNewPlatformName('');
     setNewPlatformUrl('');
     setNewPlatformLogo('');
     setShowLogoUrlInput(false);
     setIsDraggingLogo(false);
+    setEditingPlatformName(null);
+  };
+
+  const openAddService = () => {
+    resetServiceForm();
+    setIsServiceModalOpen(true);
+  };
+
+  const openEditService = (service) => {
+    setEditingServiceId(service.id);
+    setNewServiceName(service.name);
+    setNewServiceDesc(service.description || '');
+    setNewServiceLogo(service.logo || '');
+    setShowServiceLogoUrlInput(!!service.logo);
+    setIsDraggingServiceLogo(false);
+    setIsServiceModalOpen(true);
+  };
+
+  const openAddPlatform = () => {
+    resetPlatformForm();
+    setIsPlatformModalOpen(true);
+  };
+
+  const openEditPlatform = (platform) => {
+    setEditingPlatformName(platform.platform_name);
+    setNewPlatformName(platform.platform_name);
+    setNewPlatformUrl(platform.url || '');
+    setNewPlatformLogo(platform.logo || '');
+    setShowLogoUrlInput(!!platform.logo);
+    setIsDraggingLogo(false);
+    setIsPlatformModalOpen(true);
+  };
+
+  const handleSaveService = async (event) => {
+    event.preventDefault();
+    const payload = {
+      name: newServiceName,
+      description: newServiceDesc,
+      logo: newServiceLogo,
+    };
+    const ok = editingServiceId
+      ? await editService(editingServiceId, payload)
+      : await addService(payload);
+    if (!ok) return;
+    resetServiceForm();
+    setIsServiceModalOpen(false);
+  };
+
+  const handleSavePlatform = async (event) => {
+    event.preventDefault();
+    const payload = {
+      name: newPlatformName,
+      url: newPlatformUrl,
+      logo: newPlatformLogo,
+    };
+    const ok = editingPlatformName
+      ? await editPlatform(editingPlatformName, payload)
+      : await addPlatform(payload);
+    if (!ok) return;
+    resetPlatformForm();
     setIsPlatformModalOpen(false);
   };
 
@@ -104,6 +169,12 @@ export default function Settings({
     if (!files || files.length === 0) return;
     const url = await uploadLogo(files[0]);
     if (url) setNewPlatformLogo(url);
+  };
+
+  const handleServiceLogoFiles = async (files) => {
+    if (!files || files.length === 0) return;
+    const url = await uploadServiceLogo(files[0]);
+    if (url) setNewServiceLogo(url);
   };
 
   const handleProfileFiles = async (files) => {
@@ -169,7 +240,8 @@ export default function Settings({
         <ServicesSection
           services={services}
           loading={loadingServices}
-          onOpenAdd={() => setIsServiceModalOpen(true)}
+          onOpenAdd={openAddService}
+          onEdit={openEditService}
           onDelete={removeService}
         />
       )}
@@ -178,7 +250,8 @@ export default function Settings({
         <PlatformsSection
           platforms={platforms}
           loading={loadingPlatforms}
-          onOpenAdd={() => setIsPlatformModalOpen(true)}
+          onOpenAdd={openAddPlatform}
+          onEdit={openEditPlatform}
           onDelete={removePlatform}
         />
       )}
@@ -201,17 +274,28 @@ export default function Settings({
 
       {isServiceModalOpen && (
         <ServiceModal
+          isEditing={!!editingServiceId}
           name={newServiceName}
           description={newServiceDesc}
+          logo={newServiceLogo}
+          showLogoUrlInput={showServiceLogoUrlInput}
+          isUploadingLogo={isUploadingServiceLogo}
+          isDraggingLogo={isDraggingServiceLogo}
+          logoInputRef={serviceLogoInputRef}
           onNameChange={setNewServiceName}
           onDescriptionChange={setNewServiceDesc}
-          onSubmit={handleAddService}
-          onClose={() => setIsServiceModalOpen(false)}
+          onLogoChange={setNewServiceLogo}
+          onToggleLogoUrl={() => setShowServiceLogoUrlInput(prev => !prev)}
+          onDragChange={setIsDraggingServiceLogo}
+          onLogoFiles={handleServiceLogoFiles}
+          onSubmit={handleSaveService}
+          onClose={() => { resetServiceForm(); setIsServiceModalOpen(false); }}
         />
       )}
 
       {isPlatformModalOpen && (
         <PlatformModal
+          isEditing={!!editingPlatformName}
           name={newPlatformName}
           url={newPlatformUrl}
           logo={newPlatformLogo}
@@ -225,15 +309,15 @@ export default function Settings({
           onToggleLogoUrl={() => setShowLogoUrlInput(prev => !prev)}
           onDragChange={setIsDraggingLogo}
           onLogoFiles={handleLogoFiles}
-          onSubmit={handleAddPlatform}
-          onClose={() => setIsPlatformModalOpen(false)}
+          onSubmit={handleSavePlatform}
+          onClose={() => { resetPlatformForm(); setIsPlatformModalOpen(false); }}
         />
       )}
     </div>
   );
 }
 
-function ServicesSection({ services, loading, onOpenAdd, onDelete }) {
+function ServicesSection({ services, loading, onOpenAdd, onEdit, onDelete }) {
   return (
     <div className="flex-1 flex flex-col h-full space-y-4">
       <div className="glass-panel p-6 rounded-2xl border border-white/5 flex-1 flex flex-col min-h-[calc(100vh-12rem)]">
@@ -256,20 +340,40 @@ function ServicesSection({ services, loading, onOpenAdd, onDelete }) {
         ) : services.length === 0 ? (
           <EmptyState icon={Server} text="No services found. Add your first service to get started." />
         ) : (
-          <div className="divide-y divide-white/5 flex-1 overflow-y-auto pr-2">
+          <div className="grid grid-cols-4 gap-4 flex-1 overflow-y-auto pr-2 pb-4 content-start">
             {services.map(service => (
-              <div key={service.id} className="py-4 flex items-center justify-between first:pt-0 last:pb-0 group">
-                <div className="pr-4">
-                  <h3 className="font-bold text-slate-200 text-sm">{service.name}</h3>
-                  <p className="text-xs text-slate-400 mt-1">{service.description || 'No description provided.'}</p>
+              <div key={service.id} className="group relative flex flex-col rounded-2xl border border-white/5 bg-gradient-to-b from-white/[0.04] to-white/[0.01] transition-all duration-300 hover:border-amber-500/25 hover:-translate-y-1 hover:shadow-xl hover:shadow-amber-500/10">
+                <span className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-amber-500/0 via-amber-400/70 to-amber-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10" />
+
+                <CardActionMenu
+                  accent="amber"
+                  onEdit={() => onEdit(service)}
+                  onDelete={() => onDelete(service.id, service.name)}
+                />
+
+                <div className="flex justify-center py-3 px-2 pt-8">
+                  <div className="relative aspect-square w-1/2 shrink-0 rounded-xl border border-white/10 bg-white/[0.04] shadow-inner overflow-hidden">
+                    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(245,158,11,0.08),transparent_72%)] pointer-events-none" />
+                    <div className="absolute inset-0 flex items-center justify-center font-black text-2xl text-amber-400/80 select-none">
+                      {service.name.charAt(0).toUpperCase()}
+                    </div>
+                    {service.logo ? (
+                      <img
+                        src={service.logo}
+                        alt={`${service.name} icon`}
+                        onError={(event) => { event.currentTarget.style.display = 'none'; }}
+                        className="absolute inset-0 z-10 h-full w-full object-cover"
+                      />
+                    ) : null}
+                  </div>
                 </div>
-                <button
-                  onClick={() => onDelete(service.id, service.name)}
-                  className="p-2 text-slate-500 hover:text-rose-400 hover:bg-white/5 rounded-xl transition opacity-0 group-hover:opacity-100"
-                  title="Delete Service"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+
+                <div className="px-3 pb-3 flex flex-col min-h-0 flex-1">
+                  <h4 className="font-bold text-slate-100 text-sm text-center leading-tight line-clamp-2" title={service.name}>{service.name}</h4>
+                  <p className="mt-1.5 text-[11px] text-slate-400 text-center line-clamp-2" title={service.description || 'No description provided.'}>
+                    {service.description || 'No description provided.'}
+                  </p>
+                </div>
               </div>
             ))}
           </div>
@@ -279,7 +383,7 @@ function ServicesSection({ services, loading, onOpenAdd, onDelete }) {
   );
 }
 
-function PlatformsSection({ platforms, loading, onOpenAdd, onDelete }) {
+function PlatformsSection({ platforms, loading, onOpenAdd, onEdit, onDelete }) {
   return (
     <div className="flex-1 flex flex-col h-full space-y-4">
       <div className="glass-panel p-6 rounded-2xl border border-white/5 flex-1 flex flex-col min-h-[calc(100vh-12rem)]">
@@ -307,10 +411,16 @@ function PlatformsSection({ platforms, loading, onOpenAdd, onDelete }) {
               const url = platform.url ? (platform.url.startsWith('http') ? platform.url : `https://${platform.url}`) : null;
               const host = platform.url ? platform.url.replace(/^https?:\/\//, '').replace(/\/.*/, '') : null;
               return (
-              <div key={platform.platform_name} className="group relative flex flex-col rounded-2xl border border-white/5 bg-gradient-to-b from-white/[0.04] to-white/[0.01] overflow-hidden transition-all duration-300 hover:border-emerald-500/25 hover:-translate-y-1 hover:shadow-xl hover:shadow-emerald-500/10">
+              <div key={platform.platform_name} className="group relative flex flex-col rounded-2xl border border-white/5 bg-gradient-to-b from-white/[0.04] to-white/[0.01] transition-all duration-300 hover:border-emerald-500/25 hover:-translate-y-1 hover:shadow-xl hover:shadow-emerald-500/10">
                 <span className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-emerald-500/0 via-emerald-400/70 to-emerald-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10" />
 
-                <div className="flex justify-center py-3 px-2">
+                <CardActionMenu
+                  accent="emerald"
+                  onEdit={() => onEdit(platform)}
+                  onDelete={() => onDelete(platform.platform_name)}
+                />
+
+                <div className="flex justify-center py-3 px-2 pt-8">
                   <div className="relative aspect-square w-1/2 shrink-0 rounded-xl border border-white/10 bg-white/[0.04] shadow-inner overflow-hidden">
                     <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(16,185,129,0.08),transparent_72%)] pointer-events-none" />
                     <div className="absolute inset-0 flex items-center justify-center font-black text-2xl text-emerald-400/80 select-none">
@@ -327,7 +437,7 @@ function PlatformsSection({ platforms, loading, onOpenAdd, onDelete }) {
                   </div>
                 </div>
 
-                <div className="px-3 pb-3 flex flex-col min-h-0 border-b border-white/5">
+                <div className="px-3 pb-3 flex flex-col min-h-0">
                   <h4 className="font-bold text-slate-100 text-sm text-center leading-tight line-clamp-2" title={platform.platform_name}>{platform.platform_name}</h4>
                   {host ? (
                     <a
@@ -345,8 +455,8 @@ function PlatformsSection({ platforms, loading, onOpenAdd, onDelete }) {
                   )}
                 </div>
 
-                <div className="flex items-center justify-between px-3 py-2.5 border-t border-white/5 bg-dark-950/30">
-                  {url ? (
+                {url ? (
+                  <div className="flex items-center justify-center px-3 py-2.5 border-t border-white/5 bg-dark-950/30">
                     <a
                       href={url}
                       target="_blank"
@@ -357,16 +467,8 @@ function PlatformsSection({ platforms, loading, onOpenAdd, onDelete }) {
                       <ExternalLink className="w-3.5 h-3.5" />
                       Open
                     </a>
-                  ) : <span />}
-                  <button
-                    onClick={() => onDelete(platform.platform_name)}
-                    className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-500 hover:text-rose-400 transition px-2 py-1 rounded-lg hover:bg-rose-500/10"
-                    title="Remove platform"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    Remove
-                  </button>
-                </div>
+                  </div>
+                ) : null}
               </div>
               );
             })}
@@ -542,7 +644,24 @@ function ProfileSection({
   );
 }
 
-function ServiceModal({ name, description, onNameChange, onDescriptionChange, onSubmit, onClose }) {
+function ServiceModal({
+  isEditing = false,
+  name,
+  description,
+  logo,
+  showLogoUrlInput,
+  isUploadingLogo,
+  isDraggingLogo,
+  logoInputRef,
+  onNameChange,
+  onDescriptionChange,
+  onLogoChange,
+  onToggleLogoUrl,
+  onDragChange,
+  onLogoFiles,
+  onSubmit,
+  onClose
+}) {
   return (
     <FullScreenModal onClose={onClose}>
       <div className="w-full max-w-lg">
@@ -550,8 +669,8 @@ function ServiceModal({ name, description, onNameChange, onDescriptionChange, on
           <div className="w-12 h-12 bg-amber-500/10 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-amber-500/20">
             <Server className="w-6 h-6 text-amber-400" />
           </div>
-          <h2 className="text-2xl font-bold text-white mb-2">Add New Service</h2>
-          <p className="text-sm text-slate-400">Define a new service category for tracking.</p>
+          <h2 className="text-2xl font-bold text-white mb-2">{isEditing ? 'Edit Service' : 'Add New Service'}</h2>
+          <p className="text-sm text-slate-400">{isEditing ? 'Update this service category.' : 'Define a new service category for tracking.'}</p>
         </div>
 
         <form onSubmit={onSubmit} className="space-y-6">
@@ -574,7 +693,25 @@ function ServiceModal({ name, description, onNameChange, onDescriptionChange, on
               className="w-full px-4 py-3.5 rounded-xl text-slate-200 glass-input text-sm resize-none"
             />
           </Field>
-          <ModalActions onClose={onClose} submitText="Create Service" tone="amber" />
+
+          <CloudinaryImageField
+            label="Service Icon"
+            value={logo}
+            onChange={onLogoChange}
+            inputRef={logoInputRef}
+            isUploading={isUploadingLogo}
+            isDragging={isDraggingLogo}
+            onDragChange={onDragChange}
+            onFiles={onLogoFiles}
+            showUrlInput={showLogoUrlInput}
+            onToggleUrlInput={onToggleLogoUrl}
+            accent="amber"
+            previewShape="square"
+            uploadHint="Drag and drop icon, or click to browse"
+            dropHint="Drop icon here!"
+          />
+
+          <ModalActions onClose={onClose} submitText={isEditing ? 'Save Changes' : 'Create Service'} tone="amber" />
         </form>
       </div>
     </FullScreenModal>
@@ -582,6 +719,7 @@ function ServiceModal({ name, description, onNameChange, onDescriptionChange, on
 }
 
 function PlatformModal({
+  isEditing = false,
   name,
   url,
   logo,
@@ -605,8 +743,8 @@ function PlatformModal({
           <div className="w-12 h-12 bg-emerald-500/10 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-emerald-500/20">
             <Laptop className="w-6 h-6 text-emerald-400" />
           </div>
-          <h2 className="text-2xl font-bold text-white mb-2">Register Platform</h2>
-          <p className="text-sm text-slate-400">Add a new platform to map your credentials.</p>
+          <h2 className="text-2xl font-bold text-white mb-2">{isEditing ? 'Edit Platform' : 'Register Platform'}</h2>
+          <p className="text-sm text-slate-400">{isEditing ? 'Update platform details and logo.' : 'Add a new platform to map your credentials.'}</p>
         </div>
 
         <form onSubmit={onSubmit} className="space-y-6">
@@ -652,7 +790,7 @@ function PlatformModal({
             dropHint="Drop logo here!"
           />
 
-          <ModalActions onClose={onClose} submitText="Register Platform" tone="emerald" />
+          <ModalActions onClose={onClose} submitText={isEditing ? 'Save Changes' : 'Register Platform'} tone="emerald" />
         </form>
       </div>
     </FullScreenModal>
@@ -843,6 +981,59 @@ function CloudinaryImageField({
         </div>
       )}
     </Field>
+  );
+}
+
+function CardActionMenu({ onEdit, onDelete, accent = 'slate' }) {
+  const [open, setOpen] = useState(false);
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handleClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [open]);
+
+  const editHover = accent === 'amber'
+    ? 'hover:text-amber-300 hover:bg-amber-500/10'
+    : 'hover:text-emerald-300 hover:bg-emerald-500/10';
+
+  return (
+    <div ref={menuRef} className="absolute top-2 right-2 z-20">
+      <button
+        type="button"
+        onClick={(event) => { event.stopPropagation(); setOpen(prev => !prev); }}
+        className={`p-1.5 rounded-lg text-slate-500 hover:text-slate-200 hover:bg-white/10 transition ${open ? 'opacity-100 bg-white/10 text-slate-200' : 'opacity-70 group-hover:opacity-100'}`}
+        title="More actions"
+      >
+        <MoreVertical className="w-4 h-4" />
+      </button>
+      {open && (
+        <div className="absolute right-0 mt-1 w-36 py-1 rounded-xl border border-white/10 bg-dark-950/95 backdrop-blur-md shadow-xl shadow-black/40 z-30 animate-slide-up">
+          <button
+            type="button"
+            onClick={(event) => { event.stopPropagation(); setOpen(false); onEdit(); }}
+            className={`w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-300 ${editHover} transition`}
+          >
+            <Pencil className="w-3.5 h-3.5" />
+            Edit
+          </button>
+          <button
+            type="button"
+            onClick={(event) => { event.stopPropagation(); setOpen(false); onDelete(); }}
+            className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-300 hover:text-rose-400 hover:bg-rose-500/10 transition"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            Delete
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
 

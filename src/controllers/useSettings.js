@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { fetchServices, createService, deleteService } from '../models/servicesModel.js';
-import { fetchPlatforms, createPlatform, deletePlatform } from '../models/platformsModel.js';
+import { fetchServices, createService, updateService, deleteService } from '../models/servicesModel.js';
+import { fetchPlatforms, createPlatform, updatePlatform, deletePlatform } from '../models/platformsModel.js';
 import { uploadToCloudinary } from '../services/cloudinaryService.js';
 
 // Controller: system settings (service catalog + platform registry + profile
@@ -11,6 +11,7 @@ export function useSettings({ notify }) {
   const [loadingServices, setLoadingServices] = useState(false);
   const [loadingPlatforms, setLoadingPlatforms] = useState(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [isUploadingServiceLogo, setIsUploadingServiceLogo] = useState(false);
   const [isUploadingProfile, setIsUploadingProfile] = useState(false);
 
   const refreshServices = useCallback(async () => {
@@ -42,16 +43,38 @@ export function useSettings({ notify }) {
     refreshPlatforms();
   }, [refreshServices, refreshPlatforms]);
 
-  const addService = useCallback(async (name, description) => {
+  const addService = useCallback(async ({ name, description, logo }) => {
     if (!name.trim()) return false;
     try {
-      await createService({ name: name.trim(), description: description.trim() });
+      await createService({
+        name: name.trim(),
+        description: description.trim(),
+        logo: (logo || '').trim() || null,
+      });
       notify('success', 'Service added successfully');
       await refreshServices();
       return true;
     } catch (err) {
       console.error('Error adding service:', err.message);
       notify('error', err.message.includes('unique') ? 'Service name already exists' : 'Failed to add service');
+      return false;
+    }
+  }, [notify, refreshServices]);
+
+  const editService = useCallback(async (id, { name, description, logo }) => {
+    if (!name.trim()) return false;
+    try {
+      await updateService(id, {
+        name: name.trim(),
+        description: description.trim(),
+        logo: (logo || '').trim() || null,
+      });
+      notify('success', 'Service updated successfully');
+      await refreshServices();
+      return true;
+    } catch (err) {
+      console.error('Error updating service:', err.message);
+      notify('error', err.message.includes('unique') ? 'Service name already exists' : 'Failed to update service');
       return false;
     }
   }, [notify, refreshServices]);
@@ -84,6 +107,24 @@ export function useSettings({ notify }) {
     }
   }, [notify, refreshPlatforms]);
 
+  const editPlatform = useCallback(async (originalName, { name, url, logo }) => {
+    if (!name.trim()) return false;
+    try {
+      await updatePlatform(originalName, {
+        platform_name: name.trim(),
+        url: url.trim(),
+        logo: (logo || '').trim() || null,
+      });
+      notify('success', 'Platform updated successfully');
+      await refreshPlatforms();
+      return true;
+    } catch (err) {
+      console.error('Error updating platform:', err.message);
+      notify('error', err.message.includes('duplicate') || err.message.includes('primary') ? 'Platform name already registered' : 'Failed to update platform');
+      return false;
+    }
+  }, [notify, refreshPlatforms]);
+
   const removePlatform = useCallback(async (name) => {
     if (!confirm(`Are you sure you want to delete "${name}"? WARNING: All passwords associated with this platform will also be deleted due to constraint dependencies.`)) return false;
     try {
@@ -98,7 +139,7 @@ export function useSettings({ notify }) {
     }
   }, [notify, refreshPlatforms]);
 
-  const uploadLogo = useCallback(async (file) => {
+  const uploadImage = useCallback(async (file, { uploadingLabel, successLabel, errorLabel }) => {
     if (!file || !file.type.startsWith('image/')) {
       notify('error', 'Only image files (PNG, JPG, SVG, etc.) are supported.');
       return null;
@@ -107,47 +148,49 @@ export function useSettings({ notify }) {
       notify('error', 'File size exceeds 2MB limit.');
       return null;
     }
-    setIsUploadingLogo(true);
+    uploadingLabel(true);
     try {
       const url = await uploadToCloudinary(file);
-      notify('success', 'Logo uploaded to Cloudinary successfully');
+      notify('success', successLabel);
       return url;
     } catch (err) {
       console.error('Cloudinary upload error:', err.message);
-      notify('error', err.message || 'Failed to upload logo.');
+      notify('error', err.message || errorLabel);
       return null;
     } finally {
-      setIsUploadingLogo(false);
+      uploadingLabel(false);
     }
   }, [notify]);
+
+  const uploadLogo = useCallback(async (file) => {
+    return uploadImage(file, {
+      uploadingLabel: setIsUploadingLogo,
+      successLabel: 'Logo uploaded to Cloudinary successfully',
+      errorLabel: 'Failed to upload logo.',
+    });
+  }, [uploadImage]);
+
+  const uploadServiceLogo = useCallback(async (file) => {
+    return uploadImage(file, {
+      uploadingLabel: setIsUploadingServiceLogo,
+      successLabel: 'Service icon uploaded to Cloudinary successfully',
+      errorLabel: 'Failed to upload service icon.',
+    });
+  }, [uploadImage]);
 
   const uploadProfileImage = useCallback(async (file) => {
-    if (!file || !file.type.startsWith('image/')) {
-      notify('error', 'Only image files (PNG, JPG, SVG, etc.) are supported.');
-      return null;
-    }
-    if (file.size > 2 * 1024 * 1024) {
-      notify('error', 'File size exceeds 2MB limit.');
-      return null;
-    }
-    setIsUploadingProfile(true);
-    try {
-      const url = await uploadToCloudinary(file);
-      notify('success', 'Profile image uploaded to Cloudinary successfully');
-      return url;
-    } catch (err) {
-      console.error('Cloudinary upload error:', err.message);
-      notify('error', err.message || 'Failed to upload profile image.');
-      return null;
-    } finally {
-      setIsUploadingProfile(false);
-    }
-  }, [notify]);
+    return uploadImage(file, {
+      uploadingLabel: setIsUploadingProfile,
+      successLabel: 'Profile image uploaded to Cloudinary successfully',
+      errorLabel: 'Failed to upload profile image.',
+    });
+  }, [uploadImage]);
 
   return {
-    services, platforms, loadingServices, loadingPlatforms, isUploadingLogo, isUploadingProfile,
+    services, platforms, loadingServices, loadingPlatforms,
+    isUploadingLogo, isUploadingServiceLogo, isUploadingProfile,
     refreshServices, refreshPlatforms,
-    addService, removeService, addPlatform, removePlatform,
-    uploadLogo, uploadProfileImage
+    addService, editService, removeService, addPlatform, editPlatform, removePlatform,
+    uploadLogo, uploadServiceLogo, uploadProfileImage
   };
 }

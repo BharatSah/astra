@@ -3,7 +3,7 @@ import { fetchCustomers, createCustomer, updateCustomer, deleteCustomer } from '
 import { fetchServices } from '../models/servicesModel.js';
 import { fetchSettingsObject } from '../models/settingsModel.js';
 import { daysUntil, computeExpiryStatus } from '../services/dateService.js';
-import { fillTemplate, buildExpiryContext, resolveCustomerRecipients } from '../services/emailTemplateService.js';
+import { buildExpiryContext, resolveCustomerRecipients, resolveEmailPayload } from '../services/emailTemplateService.js';
 
 export function useExpiry({ notify, triggerEmail }) {
   const [customers, setCustomers] = useState([]);
@@ -26,8 +26,7 @@ export function useExpiry({ notify, triggerEmail }) {
     }
 
     const ctx = buildExpiryContext({ customer, serviceName, daysLeft });
-    const subject = fillTemplate(template.subject, ctx);
-    const body = fillTemplate(template.body, ctx);
+    const payload = resolveEmailPayload(template, ctx);
     const emailType = opts.emailType || (isExpired ? 'Service Expired Alert' : 'Expiry Warning Alert');
 
     const recipients = resolveCustomerRecipients(customer, tpl?.email_recipient, { isExpired });
@@ -38,7 +37,13 @@ export function useExpiry({ notify, triggerEmail }) {
       return;
     }
     recipients.forEach(recipient => {
-      triggerEmail({ recipient, subject, body, type: emailType });
+      triggerEmail({
+        recipient,
+        subject: payload.subject,
+        textBody: payload.textBody,
+        htmlBody: payload.htmlBody,
+        type: emailType,
+      });
     });
   }, [triggerEmail, notify]);
 

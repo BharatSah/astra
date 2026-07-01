@@ -3,7 +3,7 @@ import { fetchReminders, createReminder, updateReminder, deleteReminder, markRem
 import { fetchServices } from '../models/servicesModel.js';
 import { fetchSettingsObject } from '../models/settingsModel.js';
 import { computePaymentStatus } from '../services/dateService.js';
-import { fillTemplate, buildPaymentContext } from '../services/emailTemplateService.js';
+import { buildPaymentContext, resolveEmailPayload } from '../services/emailTemplateService.js';
 
 // Controller: payment reminders. Owns reminder/service/template fetch, CRUD,
 // mark-as-paid, and the reminder email trigger (recipient from settings).
@@ -94,10 +94,16 @@ export function usePayments({ notify, triggerEmail }) {
     }
 
     const ctx = buildPaymentContext({ reminder: rem, serviceName });
-    const subject = fillTemplate(templates.payment_reminder?.subject || 'Payment Reminder', ctx);
-    const body = fillTemplate(templates.payment_reminder?.body || 'A payment of {amount} is due.', ctx);
+    const template = templates.payment_reminder || { subject: 'Payment Reminder', body: 'A payment of {amount} is due.' };
+    const payload = resolveEmailPayload(template, ctx);
 
-    triggerEmail({ recipient, subject, body, type: 'Payment Reminder' });
+    triggerEmail({
+      recipient,
+      subject: payload.subject,
+      textBody: payload.textBody,
+      htmlBody: payload.htmlBody,
+      type: 'Payment Reminder',
+    });
   }, [templates, services, notify, triggerEmail]);
 
   return {

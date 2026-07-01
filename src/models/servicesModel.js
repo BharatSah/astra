@@ -7,8 +7,13 @@ export async function fetchServices() {
   return data || [];
 }
 
-export async function createService({ name, description }) {
-  const { error } = await supabase.from('services').insert({ name, description });
+export async function createService({ name, description, logo }) {
+  const { error } = await supabase.from('services').insert({ name, description, logo });
+  if (error) throw error;
+}
+
+export async function updateService(id, { name, description, logo }) {
+  const { error } = await supabase.from('services').update({ name, description, logo }).eq('id', id);
   if (error) throw error;
 }
 

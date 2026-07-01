@@ -16,10 +16,10 @@ export function useSmtpConfig({ notify }) {
     senderEmail: ''
   });
   const [templates, setTemplates] = useState({
-    expiry_warning: { subject: '', body: '' },
-    expiry_expired: { subject: '', body: '' },
+    expiry_warning: { subject: '', body: '', format: 'plain' },
+    expiry_expired: { subject: '', body: '', format: 'plain' },
     email_recipient: { to_email: '', warning_recipient_type: 'admin', expired_recipient_type: 'customer' },
-    payment_reminder: { subject: '', body: '' }
+    payment_reminder: { subject: '', body: '', format: 'plain' }
   });
   const [savingSmtp, setSavingSmtp] = useState(false);
   const [savingTemplates, setSavingTemplates] = useState(false);

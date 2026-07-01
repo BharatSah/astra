@@ -1,9 +1,12 @@
 import { useState } from 'react';
 import { useSmtpConfig } from '../controllers/useSmtpConfig.js';
+import { fillTemplate, htmlToPlainText, plainTextToHtml, previewTemplateBody } from '../services/emailTemplateService.js';
 import {
   AlertTriangle,
+  AlignLeft,
   Check,
   ChevronRight,
+  Code2,
   Copy,
   Eye,
   EyeOff,
@@ -68,36 +71,34 @@ export default function SmtpConfig({ onNotify }) {
     due_date: '2026-07-05'
   };
 
-  // Escape user-controlled text before injecting into innerHTML to prevent stored XSS
-  // via email template bodies (e.g. <script>, <img onerror>).
-  const escapeHtml = (str) => String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-
   const getReplacedSubject = () => {
     const tpl = templates[selectedTemplateKey];
     if (!tpl) return '';
-    let subject = tpl.subject || '';
-    Object.keys(sampleData).forEach(key => {
-      subject = subject.replaceAll(`{${key}}`, sampleData[key]);
-    });
-    return subject;
+    return fillTemplate(tpl.subject || '', sampleData);
   };
 
-  const getReplacedBody = () => {
+  const getReplacedBodyPreview = () => {
     const tpl = templates[selectedTemplateKey];
-    if (!tpl) return '';
-    // Escape the raw body first so any HTML in the template is treated as text,
-    // then convert newlines to <br /> for preview formatting.
-    let body = escapeHtml(tpl.body || '');
-    Object.keys(sampleData).forEach(key => {
-      body = body.replaceAll(`{${key}}`, escapeHtml(sampleData[key]));
-    });
-    return body.split('\n').join('<br />');
+    if (!tpl) return { html: '', format: 'plain' };
+    return previewTemplateBody(tpl, sampleData);
   };
+
+  const currentTemplate = templates[selectedTemplateKey] || {};
+  const bodyFormat = currentTemplate.format === 'html' ? 'html' : 'plain';
+
+  const handleBodyFormatChange = (nextFormat) => {
+    if (nextFormat === bodyFormat) return;
+    const body = currentTemplate.body || '';
+    const nextBody = nextFormat === 'plain'
+      ? htmlToPlainText(body)
+      : plainTextToHtml(body);
+    setTemplates({
+      ...templates,
+      [selectedTemplateKey]: { ...currentTemplate, format: nextFormat, body: nextBody },
+    });
+  };
+
+  const bodyPreview = getReplacedBodyPreview();
 
   const tabs = [
     { id: 'server', label: 'SMTP Server', icon: Server },
@@ -144,8 +145,6 @@ export default function SmtpConfig({ onNotify }) {
       ]
     }
   };
-
-  const currentTemplate = templates[selectedTemplateKey] || {};
 
   return (
     <div className="animate-slide-up flex flex-col min-h-[calc(100vh-7rem)] gap-6">
@@ -478,22 +477,49 @@ export default function SmtpConfig({ onNotify }) {
                 </div>
 
                 <div>
-                  <div className="flex justify-between items-center mb-1.5">
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">Email Body Message</label>
-                    <span className="text-[10px] text-slate-500">Insert tokens from the toolbar</span>
+                  <div className="flex justify-between items-center mb-1.5 gap-3">
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">Email Body</label>
+                    <div className="flex items-center gap-1 p-0.5 bg-slate-900/60 rounded-lg border border-slate-850">
+                      <button
+                        type="button"
+                        onClick={() => handleBodyFormatChange('plain')}
+                        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-bold transition cursor-pointer ${bodyFormat === 'plain' ? 'bg-brand-600/25 text-brand-300 border border-brand-500/30' : 'text-slate-500 hover:text-slate-300'}`}
+                      >
+                        <AlignLeft className="w-3 h-3" />
+                        Plain
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleBodyFormatChange('html')}
+                        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-bold transition cursor-pointer ${bodyFormat === 'html' ? 'bg-brand-600/25 text-brand-300 border border-brand-500/30' : 'text-slate-500 hover:text-slate-300'}`}
+                      >
+                        <Code2 className="w-3 h-3" />
+                        HTML
+                      </button>
+                    </div>
                   </div>
+
                   <textarea
                     id={`${selectedTemplateKey}_body`}
-                    placeholder="Compose mail message content"
+                    placeholder={bodyFormat === 'html'
+                      ? '<table style="width:100%;font-family:Arial,sans-serif;">\n  <tr><td style="padding:24px;">\n    <h1 style="color:#111;">Hi {customer_name}</h1>\n  </td></tr>\n</table>'
+                      : 'Compose mail message content'}
                     value={currentTemplate.body || ''}
                     onChange={(e) => setTemplates({
                       ...templates,
                       [selectedTemplateKey]: { ...currentTemplate, body: e.target.value }
                     })}
-                    rows="7"
-                    className="w-full px-4 py-3 rounded-xl text-slate-200 glass-input text-sm font-sans leading-relaxed resize-none transition-all duration-200 focus:scale-[1.01]"
+                    rows={bodyFormat === 'html' ? 12 : 7}
+                    spellCheck={bodyFormat === 'plain'}
+                    className={`w-full px-4 py-3 rounded-xl text-slate-200 glass-input text-sm leading-relaxed resize-y transition-all duration-200 focus:scale-[1.01] ${bodyFormat === 'html' ? 'font-mono text-[12px]' : 'font-sans'}`}
                     required
                   />
+
+                  {bodyFormat === 'html' && (
+                    <p className="mt-2 text-[10px] text-slate-500 leading-relaxed">
+                      Paste full HTML with inline CSS for best email-client support. Use tokens like {'{customer_name}'} inside your markup. External stylesheets are not supported.
+                    </p>
+                  )}
 
                   <div className="mt-2 p-2 bg-slate-900/60 rounded-xl border border-slate-850 flex flex-wrap gap-1.5 items-center">
                     <span className="text-[10px] font-bold text-slate-500 uppercase px-1.5">Insert:</span>
@@ -576,8 +602,13 @@ export default function SmtpConfig({ onNotify }) {
                 </div>
 
                 <div className="flex-1 bg-slate-950 p-6 overflow-y-auto min-h-[180px] text-slate-300 text-xs leading-relaxed space-y-4 font-sans">
-                  <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-850 max-w-sm space-y-2">
-                    <p dangerouslySetInnerHTML={{ __html: getReplacedBody() || '<span class="text-slate-600 italic">Empty body text</span>' }} />
+                  <div className={`bg-slate-900/60 p-4 rounded-xl border border-slate-850 space-y-2 ${bodyPreview.format === 'html' ? 'max-w-full' : 'max-w-sm'}`}>
+                    {bodyPreview.format === 'html' && (
+                      <span className="inline-block text-[9px] font-bold uppercase tracking-wider text-brand-400 bg-brand-500/10 border border-brand-500/20 px-2 py-0.5 rounded-full mb-2">
+                        HTML Preview
+                      </span>
+                    )}
+                    <div dangerouslySetInnerHTML={{ __html: bodyPreview.html || '<span class="text-slate-600 italic">Empty body text</span>' }} />
                   </div>
                 </div>
               </div>

@@ -1,4 +1,5 @@
 import { supabase } from "../models/dbClient.js";
+import { htmlToPlainText } from "./emailTemplateService.js";
 
 const FUNCTION_NAME = "send-email";
 
@@ -28,21 +29,24 @@ function extractEdgeError(error, data) {
 
 /**
  * Send an email through the Supabase Edge Function.
- * @param {{to: string | string[], subject: string, textBody: string, emailType?: string}} params
+ * @param {{to: string | string[], subject: string, textBody?: string, htmlBody?: string, emailType?: string}} params
  * @returns {Promise<{success: boolean, message?: string, error?: string, source: string}>}
  */
-export async function sendEmail({ to, subject, textBody, emailType }) {
-  if (!to || !subject || !textBody) {
+export async function sendEmail({ to, subject, textBody, htmlBody, emailType }) {
+  if (!to || !subject || (!textBody && !htmlBody)) {
     return { success: false, error: "Missing to, subject or body", source: "client" };
   }
+
+  const resolvedText = textBody || htmlToPlainText(htmlBody);
+  const resolvedHtml = htmlBody || buildHtmlBody(textBody);
 
   try {
     const { data, error } = await supabase.functions.invoke(FUNCTION_NAME, {
       body: {
         to,
         subject,
-        textBody,
-        htmlBody: buildHtmlBody(textBody),
+        textBody: resolvedText,
+        htmlBody: resolvedHtml,
         emailType: emailType || null,
       },
     });

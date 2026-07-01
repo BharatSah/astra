@@ -19,7 +19,8 @@ export function useEmailDispatch(notify, sessionReady = true) {
   }, [sessionReady, loadLogs, notify]);
 
   const triggerEmail = useCallback(async (emailObj) => {
-    if (!emailObj?.recipient || !emailObj?.subject || !emailObj?.body) {
+    const bodyText = emailObj?.textBody ?? emailObj?.body;
+    if (!emailObj?.recipient || !emailObj?.subject || (!bodyText && !emailObj?.htmlBody)) {
       notify('error', 'Email is missing recipient, subject, or body.');
       return;
     }
@@ -27,7 +28,8 @@ export function useEmailDispatch(notify, sessionReady = true) {
     const result = await sendEmail({
       to: emailObj.recipient,
       subject: emailObj.subject,
-      textBody: emailObj.body,
+      textBody: bodyText,
+      htmlBody: emailObj.htmlBody,
       emailType: emailObj.type,
     });
 
@@ -38,7 +40,7 @@ export function useEmailDispatch(notify, sessionReady = true) {
         const saved = await insertEmailLog({
           recipient: emailObj.recipient,
           subject: emailObj.subject,
-          body: emailObj.body,
+          body: bodyText || emailObj.htmlBody,
           status: 'sent',
           type: emailObj.type,
         });
@@ -54,7 +56,7 @@ export function useEmailDispatch(notify, sessionReady = true) {
         const saved = await insertEmailLog({
           recipient: emailObj.recipient,
           subject: emailObj.subject,
-          body: emailObj.body,
+          body: bodyText || emailObj.htmlBody,
           status: 'failed',
           type: emailObj.type,
           error: result.error,
