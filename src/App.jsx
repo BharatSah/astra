@@ -343,8 +343,6 @@ export default function App() {
               </div>
             </div>
           </div>
-
-          <p className="text-[9px] text-slate-600 text-center tracking-wide py-2 px-4">Version 1.0.0 (c) Astra</p>
         </div>
       </aside>
 
